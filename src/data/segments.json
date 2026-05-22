@@ -1,0 +1,114 @@
+{
+  "_meta": {
+    "description": "Synthetic AutoSegment definitions and visitor coverage data mimicking Bloomreach Engagement segments",
+    "brand": "kendra-scott",
+    "generated_at": "2026-05-22T00:00:00Z"
+  },
+  "summary": {
+    "total_sessions": 1000,
+    "sessions_assigned_to_segment": 694,
+    "sessions_unassigned": 306,
+    "autosegment_coverage_rate": 0.694,
+    "total_segments_defined": 6,
+    "active_segments": 5,
+    "inactive_segments": 1
+  },
+  "segments": [
+    {
+      "segment_id": "seg_high_value",
+      "segment_name": "High Value Loyalist",
+      "segment_type": "autosegment",
+      "status": "active",
+      "definition": {
+        "rules": [
+          { "field": "purchase_count_lifetime", "operator": "gte", "value": 5 },
+          { "field": "aov_lifetime", "operator": "gte", "value": 150 }
+        ],
+        "logic": "AND"
+      },
+      "visitor_count": 142,
+      "coverage_pct": 0.142,
+      "persona_archetypes": ["loyal_luxury_buyer"]
+    },
+    {
+      "segment_id": "seg_gift_intent",
+      "segment_name": "Gift Intent Visitor",
+      "segment_type": "autosegment",
+      "status": "active",
+      "definition": {
+        "rules": [
+          { "field": "arrival_campaign", "operator": "contains", "value": "gift" },
+          { "field": "purchase_count_lifetime", "operator": "eq", "value": 0 }
+        ],
+        "logic": "AND"
+      },
+      "visitor_count": 198,
+      "coverage_pct": 0.198,
+      "persona_archetypes": ["first_time_gift_shopper"]
+    },
+    {
+      "segment_id": "seg_sale_engager",
+      "segment_name": "Promotion Engager",
+      "segment_type": "autosegment",
+      "status": "active",
+      "definition": {
+        "rules": [
+          { "field": "arrival_campaign", "operator": "contains", "value": "sale" },
+          { "field": "click_rate_on_sale_badges", "operator": "gte", "value": 0.5 }
+        ],
+        "logic": "AND"
+      },
+      "visitor_count": 211,
+      "coverage_pct": 0.211,
+      "persona_archetypes": ["sale_hunter"]
+    },
+    {
+      "segment_id": "seg_browse_heavy",
+      "segment_name": "High Browse Low Convert",
+      "segment_type": "autosegment",
+      "status": "active",
+      "definition": {
+        "rules": [
+          { "field": "pages_viewed_avg", "operator": "gte", "value": 10 },
+          { "field": "purchase_count_lifetime", "operator": "eq", "value": 0 }
+        ],
+        "logic": "AND"
+      },
+      "visitor_count": 89,
+      "coverage_pct": 0.089,
+      "persona_archetypes": ["browse_only_teen"]
+    },
+    {
+      "segment_id": "seg_new_visitor",
+      "segment_name": "New Visitor",
+      "segment_type": "autosegment",
+      "status": "active",
+      "definition": {
+        "rules": [
+          { "field": "is_returning", "operator": "eq", "value": false },
+          { "field": "arrival_source", "operator": "in", "value": ["organic_search", "direct"] }
+        ],
+        "logic": "AND"
+      },
+      "visitor_count": 54,
+      "coverage_pct": 0.054,
+      "persona_archetypes": ["anonymous"]
+    },
+    {
+      "segment_id": "seg_lapsed_buyer",
+      "segment_name": "Lapsed Buyer (90+ days)",
+      "segment_type": "autosegment",
+      "status": "inactive",
+      "definition": {
+        "rules": [
+          { "field": "days_since_last_purchase", "operator": "gte", "value": 90 },
+          { "field": "purchase_count_lifetime", "operator": "gte", "value": 1 }
+        ],
+        "logic": "AND"
+      },
+      "visitor_count": 0,
+      "coverage_pct": 0,
+      "note": "Segment defined but not yet activated — missing behavioral signal for days_since_last_purchase"
+    }
+  ]
+}

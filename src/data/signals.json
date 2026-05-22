@@ -1,0 +1,75 @@
+{
+  "_meta": {
+    "description": "Synthetic behavioral event signals mimicking Bloomreach Engagement event stream",
+    "brand": "kendra-scott",
+    "generated_at": "2026-05-22T00:00:00Z",
+    "signal_window_days": 30
+  },
+  "summary": {
+    "total_events": 8420,
+    "most_recent_event_at": "2026-05-21T23:47:00Z",
+    "hours_since_most_recent_event": 0.22,
+    "signal_freshness_band": "lt_24h",
+    "event_breakdown": {
+      "page_view": 5100,
+      "product_click": 1840,
+      "add_to_cart": 620,
+      "purchase": 310,
+      "search": 550
+    }
+  },
+  "recent_events": [
+    {
+      "event_id": "evt_001",
+      "event_type": "purchase",
+      "visitor_id": "vis_loyal_001",
+      "product_id": "ks_prod_001",
+      "timestamp": "2026-05-21T23:47:00Z",
+      "value": 298.00,
+      "session_id": "sess_001_prev"
+    },
+    {
+      "event_id": "evt_002",
+      "event_type": "add_to_cart",
+      "visitor_id": "vis_loyal_001",
+      "product_id": "ks_prod_003",
+      "timestamp": "2026-05-21T22:30:00Z",
+      "value": null,
+      "session_id": "sess_001_prev"
+    },
+    {
+      "event_id": "evt_003",
+      "event_type": "product_click",
+      "visitor_id": "vis_sale_001",
+      "product_id": "ks_prod_010",
+      "timestamp": "2026-05-21T21:15:00Z",
+      "value": null,
+      "session_id": "sess_003_prev"
+    },
+    {
+      "event_id": "evt_004",
+      "event_type": "search",
+      "visitor_id": "vis_teen_001",
+      "query": "earrings",
+      "timestamp": "2026-05-21T20:00:00Z",
+      "value": null,
+      "session_id": "sess_004_prev"
+    },
+    {
+      "event_id": "evt_005",
+      "event_type": "page_view",
+      "visitor_id": null,
+      "product_id": null,
+      "page": "/collections/fine-jewelry",
+      "timestamp": "2026-05-21T19:45:00Z",
+      "value": null,
+      "session_id": "sess_005"
+    }
+  ],
+  "signal_age_distribution": {
+    "last_24h_pct": 0.38,
+    "24h_to_72h_pct": 0.31,
+    "3d_to_7d_pct": 0.21,
+    "older_than_7d_pct": 0.10
+  }
+}

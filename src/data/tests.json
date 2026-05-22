@@ -1,0 +1,100 @@
+{
+  "_meta": {
+    "description": "Synthetic A/B test configurations mimicking Bloomreach Discovery experiment configs",
+    "brand": "kendra-scott",
+    "generated_at": "2026-05-22T00:00:00Z"
+  },
+  "summary": {
+    "active_personalization_rules": 7,
+    "rules_with_active_test": 3,
+    "rules_without_test": 4,
+    "ab_test_coverage_rate": 0.4286,
+    "total_tests_defined": 4,
+    "active_tests": 3,
+    "completed_tests": 1
+  },
+  "tests": [
+    {
+      "test_id": "test_001",
+      "test_name": "Fine Jewelry Boost — High Value Loyalists",
+      "status": "active",
+      "rule_id": "rule_001",
+      "start_date": "2026-05-01T00:00:00Z",
+      "end_date": "2026-06-01T00:00:00Z",
+      "variants": [
+        { "variant_id": "control", "description": "No boost applied", "traffic_split": 0.5 },
+        { "variant_id": "treatment", "description": "Boost fine-jewelry category 0.8", "traffic_split": 0.5 }
+      ],
+      "primary_metric": "revenue_per_visit",
+      "preliminary_results": {
+        "control_rpv": 4.82,
+        "treatment_rpv": 5.31,
+        "lift_pct": 10.2,
+        "statistical_significance": 0.87,
+        "note": "Approaching significance — continue running"
+      }
+    },
+    {
+      "test_id": "test_002",
+      "test_name": "Gift Set Boost — Gift Intent Segment",
+      "status": "active",
+      "rule_id": "rule_002",
+      "start_date": "2026-05-10T00:00:00Z",
+      "end_date": "2026-06-10T00:00:00Z",
+      "variants": [
+        { "variant_id": "control", "description": "Default ranking", "traffic_split": 0.5 },
+        { "variant_id": "treatment", "description": "Boost gift-set tag 0.9", "traffic_split": 0.5 }
+      ],
+      "primary_metric": "add_to_cart_rate",
+      "preliminary_results": {
+        "control_atc": 0.042,
+        "treatment_atc": 0.061,
+        "lift_pct": 45.2,
+        "statistical_significance": 0.93,
+        "note": "Strong signal — nearing decision point"
+      }
+    },
+    {
+      "test_id": "test_003",
+      "test_name": "Sale Items Boost — Promotion Engagers",
+      "status": "active",
+      "rule_id": "rule_004",
+      "start_date": "2026-05-15T00:00:00Z",
+      "end_date": "2026-06-15T00:00:00Z",
+      "variants": [
+        { "variant_id": "control", "description": "Default ranking during sale period", "traffic_split": 0.5 },
+        { "variant_id": "treatment", "description": "Boost on-sale tag 1.0", "traffic_split": 0.5 }
+      ],
+      "primary_metric": "conversion_rate",
+      "preliminary_results": {
+        "control_cvr": 0.031,
+        "treatment_cvr": 0.038,
+        "lift_pct": 22.6,
+        "statistical_significance": 0.79,
+        "note": "Early — insufficient traffic yet"
+      }
+    },
+    {
+      "test_id": "test_004",
+      "test_name": "Gold Boost Global — Completed",
+      "status": "completed",
+      "rule_id": "rule_003",
+      "start_date": "2026-03-01T00:00:00Z",
+      "end_date": "2026-04-01T00:00:00Z",
+      "variants": [
+        { "variant_id": "control", "description": "No material boost", "traffic_split": 0.5 },
+        { "variant_id": "treatment", "description": "Boost gold material 0.6", "traffic_split": 0.5 }
+      ],
+      "primary_metric": "revenue_per_visit",
+      "final_results": {
+        "control_rpv": 3.90,
+        "treatment_rpv": 4.21,
+        "lift_pct": 7.9,
+        "statistical_significance": 0.95,
+        "decision": "ship",
+        "note": "Shipped. Rule remains active but test is closed — now in conflict with rule_005."
+      }
+    }
+  ],
+  "untested_rules": ["rule_005", "rule_006", "rule_007", "rule_008"]
+}

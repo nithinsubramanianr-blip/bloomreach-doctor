@@ -1,0 +1,94 @@
+{
+  "_meta": {
+    "description": "Four shopper archetypes for the Personalization Performance Doctor demo. These replace all prior persona definitions.",
+    "brand": "kendra-scott",
+    "generated_at": "2026-05-22T00:00:00Z"
+  },
+  "archetypes": [
+    {
+      "archetype_id": "prospective",
+      "archetype_name": "Prospective",
+      "profile_description": "First visit, no login, no purchase history. Browsing broadly — arrived via organic search or social. No behavioral signals available yet. Bloomreach has no BRUID for this visitor.",
+      "login_status": "anonymous",
+      "session_count": 1,
+      "purchase_history": {
+        "total_orders": 0,
+        "lifetime_value": 0,
+        "average_order_value": 0,
+        "last_purchase_date": null
+      },
+      "segment_list": [],
+      "last_signal_date": null,
+      "bruid_present": false,
+      "demo_query": "necklace",
+      "arrival_source": "organic_search",
+      "device": "mobile",
+      "personalization_gap_note": "Without BRUID, Bloomreach cannot serve personalized results. Generic ranking applies. All content is identical to any other anonymous visitor.",
+      "personalized_results_note": "Shown for illustration only — what this visitor would see if identified (expected state when BRUID match rate reaches 70%+)"
+    },
+    {
+      "archetype_id": "new_customer",
+      "archetype_name": "New Customer",
+      "profile_description": "Purchased once, recently logged in. Limited behavioral signal — Bloomreach has a BRUID and one transaction, but AutoSegment assignment is still forming. Enough signal to start some personalization.",
+      "login_status": "logged_in",
+      "session_count": 3,
+      "purchase_history": {
+        "total_orders": 1,
+        "lifetime_value": 68.00,
+        "average_order_value": 68.00,
+        "last_purchase_date": "2026-04-15"
+      },
+      "segment_list": ["new_customer_30d"],
+      "last_signal_date": "2026-05-20",
+      "bruid_present": true,
+      "demo_query": "yellow rose",
+      "arrival_source": "email_welcome_series",
+      "device": "desktop",
+      "personalization_gap_note": "BRUID is present but AutoSegment assignment is thin. Loomi can apply new-customer segment rules, but signal is insufficient for strong 1:1 personalization.",
+      "personalized_results_note": "Some personalization active — new customer segment rule applied. Missing depth of signal limits ranking quality."
+    },
+    {
+      "archetype_id": "gifting_shopper",
+      "archetype_name": "Gifting Shopper",
+      "profile_description": "High purchase intent, seasonal. Searching for others, not herself. Price-sensitive — looking under $100. Arrived via 'gifts for her' paid search. No prior Kendra Scott purchase history.",
+      "login_status": "anonymous",
+      "session_count": 1,
+      "purchase_history": {
+        "total_orders": 0,
+        "lifetime_value": 0,
+        "average_order_value": 0,
+        "last_purchase_date": null
+      },
+      "segment_list": ["gift_intent"],
+      "last_signal_date": null,
+      "bruid_present": false,
+      "demo_query": "necklace gift",
+      "arrival_source": "paid_search",
+      "arrival_campaign": "gifts-for-her-spring-2026",
+      "device": "mobile",
+      "personalization_gap_note": "Campaign signal from paid search attribution enables gift-intent segment matching even without BRUID. However, without BRUID persistence, this visitor will not be recognised on return visits.",
+      "personalized_results_note": "Gift-intent segment rule applied. Under-$100 gift sets boosted. Price-sensitive framing surfaced."
+    },
+    {
+      "archetype_id": "returning_vip",
+      "archetype_name": "Returning VIP",
+      "profile_description": "Repeat purchaser with known preferences. High lifetime value. Bloomreach has strong BRUID history, AutoSegment membership confirmed, and rich behavioral signals (clicks, carts, purchases) over 12+ months.",
+      "login_status": "logged_in",
+      "session_count": 24,
+      "purchase_history": {
+        "total_orders": 9,
+        "lifetime_value": 2140.00,
+        "average_order_value": 237.78,
+        "last_purchase_date": "2026-05-10"
+      },
+      "segment_list": ["high_value_loyalist", "fine_jewelry_affinity", "new_arrival_engager"],
+      "last_signal_date": "2026-05-21",
+      "bruid_present": true,
+      "demo_query": "necklace gift",
+      "arrival_source": "direct",
+      "device": "desktop",
+      "personalization_gap_note": "Strong BRUID + segments + fresh signals. This is the gold standard — Loomi has everything it needs. The contrast between this archetype and Prospective is the core demo story.",
+      "personalized_results_note": "Full 1:1 personalization active. Fine jewelry, new arrivals, and high-price-point items boosted. Editorial content surfaced."
+    }
+  ]
+}
