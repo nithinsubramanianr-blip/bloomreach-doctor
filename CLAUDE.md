@@ -346,12 +346,12 @@ Wait for my approval before doing anything.
 
 | Spec | Module | Feature | Req | Arch | Design | Impl | Test |
 |---|---|---|---|---|---|---|---|
-| 001 | C5 | Synthetic Data Layer | **approved** | ⬜ | ⬜ | ⬜ | ⬜ |
-| 002 | M1 | Bloomreach Integration Layer | **approved** | ⬜ | ⬜ | ⬜ | ⬜ |
-| 003 | M2 | PRS Scoring Engine | **approved** | ⬜ | ⬜ | ⬜ | ⬜ |
-| 004 | M3 | Natural Language Interface | **approved** | ⬜ | ⬜ | ⬜ | ⬜ |
-| 005 | M4 | PPD Dashboard UI | **approved** | ⬜ | ⬜ | ⬜ | ⬜ |
-| 006 | M5 | Next.js PLP | **approved** | ⬜ | ⬜ | ⬜ | ⬜ |
+| 001 | C5 | Synthetic Data Layer | **approved** | **approved** | **approved** | ⬜ | ⬜ |
+| 002 | M1 | Bloomreach Integration Layer | **approved** | **approved** | **approved** | ⬜ | ⬜ |
+| 003 | M2 | PRS Scoring Engine | **approved** | **approved** | **approved** | ⬜ | ⬜ |
+| 004 | M3 | Natural Language Interface | **approved** | **approved** | **approved** | ⬜ | ⬜ |
+| 005 | M4 | PPD Dashboard UI | **approved** | **approved** | **approved** | ⬜ | ⬜ |
+| 006 | M5 | Next.js PLP | **approved** | **approved** | **approved** | ⬜ | ⬜ |
 | 007 | — | Submission Artifacts | **approved** | ⬜ | ⬜ | ⬜ | ⬜ |
 
 Build dependency chain:

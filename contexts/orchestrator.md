@@ -8,13 +8,13 @@ PIPELINE STATUS — [date]
 
 Spec | Component | Feature                        | Req  | Arch | Design | Impl | Test | Next action
 -----|-----------|-------------------------------|------|------|--------|------|------|------------------
-001  | C5        | Synthetic Data Layer           | ✅   | ⬜   | ⬜     | ⬜   | ⬜   | Req approved → Arch gate
-002  | M1        | Bloomreach Integration Layer   | ✅   | ⬜   | ⬜     | ⬜   | ⬜   | Req approved → Arch gate
-003  | M2        | PRS Scoring Engine             | ✅   | ⬜   | ⬜     | ⬜   | ⬜   | Req approved → Arch gate
-004  | M3        | Natural Language Interface     | ✅   | ⬜   | ⬜     | ⬜   | ⬜   | Req approved → Arch gate
-005  | M4        | PPD Dashboard UI               | ✅   | ⬜   | ⬜     | ⬜   | ⬜   | Req approved → Arch gate
-006  | M5        | Next.js PLP                    | ✅   | ⬜   | ⬜     | ⬜   | ⬜   | Req approved → Arch gate
-007  | —         | Submission Artifacts           | ✅   | ⬜   | ⬜     | ⬜   | ⬜   | Req approved → awaits 002+005 stable
+001  | C5        | Synthetic Data Layer           | ✅   | ✅   | ✅     | ⬜   | ⬜   | → Dev gate
+002  | M1        | Bloomreach Integration Layer   | ✅   | ✅   | ✅     | ⬜   | ⬜   | → Dev gate
+003  | M2        | PRS Scoring Engine             | ✅   | ✅   | ✅     | ⬜   | ⬜   | → Dev gate
+004  | M3        | Natural Language Interface     | ✅   | ✅   | ✅     | ⬜   | ⬜   | → Dev gate
+005  | M4        | PPD Dashboard UI               | ✅   | ✅   | ✅     | ⬜   | ⬜   | → Dev gate
+006  | M5        | Next.js PLP                    | ✅   | ✅   | ✅     | ⬜   | ⬜   | → Dev gate
+007  | —         | Submission Artifacts           | ✅   | ⬜   | ⬜     | ⬜   | ⬜   | Awaits 002+005 stable
 ```
 
 ## Build Dependency Chain (enforce strictly)
