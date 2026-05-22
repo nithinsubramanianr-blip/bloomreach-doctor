@@ -1,64 +1,71 @@
 ---
-feature: Synthetic Data & Environment
+feature: Synthetic Data Layer
 spec_id: "001"
-module: M5
+component: C5
 phase: requirements
 owner: PM
 status: draft
-version: "1.0"
+version: "2.0"
 entry_criteria:
-  - CLAUDE.md is complete with correct architecture and archetypes
+  - CLAUDE.md is complete with correct architecture, personas, and PRS states
 exit_criteria:
-  - All synthetic JSON files exist with correct shape
-  - All four archetypes defined in archetypes.json
-  - prs_demo_state.json produces exactly 52/100
-  - Each file has been validated against the normaliser schema
+  - All data files exist with correct shapes
+  - Three personas in personas.json
+  - prs_pre_fix.json sums to 52, prs_post_fix.json arithmetic confirmed
+  - fix_catalogue.json has AutoSegment as rank 1
+  - 50 products in GBP with no KS IP
   - Human has set status to approved
 ---
 
-# Requirements Spec — Synthetic Data & Environment (001 / M5)
+# Requirements Spec — Synthetic Data Layer (001 / C5)
 
 ## Problem
+All four build modules (M1–M4) plus M5 need deterministic test data that mirrors real Bloomreach data shapes. Without this layer, no module can be built or tested before live credentials arrive. C5 also serves as the permanent fallback when live endpoints are unavailable.
 
-All three MCP/API clients need a synthetic fallback that activates when live endpoints are unavailable. The fallback must produce the same normalised schema as the live path — otherwise the scoring engine and NL interface cannot be built and tested without live credentials. This feature is the foundation that unblocks M2 (scoring) and M3 (NL interface) in parallel.
+## Functional Requirements
 
-## User stories
+### personas.json
+- **FR-001-1:** SHALL define exactly 3 personas with fields: `persona_id`, `display_name`, `archetype_name`, `profile_description`, `login_status`, `session_count`, `page_views`, `product_clicks`, `purchase_count`, `aov`, `segment_name`, `last_signal_date`, `bruid_present`, `bruid_value`, `demo_query`.
+- **FR-001-2:** Personas SHALL be: `guest` (New Prospecting, no BRUID), `sarah` (Gifting, BRUID present), `alex` (High Value Returning, BRUID present).
+- **FR-001-3:** `demo_query` SHALL be "necklace" for all three — no per-persona queries.
 
-- **US-001-1:** As a developer, I want to run the entire app locally without Bloomreach credentials so I can build and test every module against deterministic data.
-- **US-001-2:** As a QA engineer, I want synthetic data that produces the exact locked demo scores (52/100 Amber) so every test run is reproducible.
-- **US-001-3:** As a demo presenter, I want the archetype simulator to show four distinct shopper experiences so judges can see the personalization gap clearly.
+### prs_pre_fix.json
+- **FR-001-4:** SHALL contain five dimension objects producing `composite_score: 52`. Scores: BRUID=8, AutoSegment=6, SignalFreshness=14, RuleConflicts=18, ABTest=6.
+- **FR-001-5:** `rag_status` SHALL be "amber". `boost_rules_state` SHALL be "all_inactive".
+- **FR-001-6:** Each dimension object SHALL include all M1→M2 contract fields: `dimension_id`, `raw_value`, `normalised_score`, `status`, `data_source`, `timestamp`, `is_synthetic`.
 
-## Functional requirements
+### prs_post_fix.json
+- **FR-001-7:** SHALL contain five dimension objects. Scores per spec: BRUID=8, AutoSegment=16, SignalFreshness=14, RuleConflicts=16, ABTest=6. `boost_rules_state` SHALL be "all_active".
+- **FR-001-8:** ⚠️ **OPEN ITEM:** Dimension scores sum to 60, spec states 70. Architect must confirm correct post-fix total before this spec can be fully approved.
 
-### Core data files
+### fix_catalogue.json
+- **FR-001-9:** SHALL contain exactly 3 fix objects. Rank 1 = AutoSegment (12–18% RPV), Rank 2 = BRUID (8–15% RPV), Rank 3 = Rule Conflicts (5–10% RPV).
+- **FR-001-10:** Each fix SHALL include: `fix_id`, `dimension_linked`, `fix_title`, `plain_english_description`, `effort_level`, `estimated_revenue_impact`, `action_label`, `risk_level`, `steps`.
 
-- **FR-001-1:** `/data/archetypes.json` SHALL define exactly four archetypes with these fields per entry: `archetype_id`, `archetype_name`, `profile_description`, `login_status`, `session_count`, `purchase_history`, `segment_list`, `last_signal_date`, `bruid_present`, `demo_query`.
-- **FR-001-2:** The four archetypes SHALL be: `prospective` (demo_query: "necklace"), `new_customer` (demo_query: "yellow rose"), `gifting_shopper` (demo_query: "necklace gift"), `returning_vip` (demo_query: "necklace gift").
-- **FR-001-3:** `/data/prs_demo_state.json` SHALL contain the five dimension scores that produce PRS = 52/100: BRUID Match Rate 8/20 (critical), AutoSegment Coverage 12/20 (warning), Signal Freshness 14/20 (warning), Rule Conflicts 10/20 (warning), A/B Test Coverage 8/20 (critical).
-- **FR-001-4:** `/data/search-results.json` SHALL contain personalized and generic result sets for all four archetypes for queries: "necklace", "yellow rose", "necklace gift". Each set SHALL reference product IDs from `products.json` and include 6 product IDs per column.
-- **FR-001-5:** `/data/products.json` SHALL contain at least 20 Kendra Scott products with fields: `product_id`, `name`, `category`, `price`, `sale_price`, `material`, `tags`, `is_on_sale`, `is_new_arrival`, `is_trending`, `is_gift_set`, `image_placeholder`, `rating`, `review_count`.
+### products.json / products.csv
+- **FR-001-11:** SHALL contain exactly 50 products. No Kendra Scott IP, no real brand names.
+- **FR-001-12:** Currency SHALL be GBP throughout. No USD.
+- **FR-001-13:** Product schema: `product_id`, `name`, `description`, `price`, `currency`, `category`, `price_band` (entry/mid/premium), `gift_eligible`, `gift_wrappable`, `is_new_arrival`, `is_bestseller`, `review_count`, `image_url`.
+- **FR-001-14:** Distribution: 17 gifting products (£30–£80, gift_eligible=true), 17 premium/new collection (£150–£400, is_new_arrival=true, price_band=premium), 16 bestseller/entry (£25–£60, is_bestseller=true).
+- **FR-001-15:** `/data/products.csv` SHALL contain the same 50 products in CSV format for Bloomreach Discovery catalogue import.
 
-### Normaliser schema
+### cached-results/
+- **FR-001-16:** `/data/cached-results/` SHALL contain 6 JSON files: `{guest|sarah|alex}-{before|after}.json`. These are populated after sandbox Discovery calls are confirmed. Until then, placeholder files with empty `products: []` arrays are acceptable.
+- **FR-001-17:** Each cached file SHALL match the normalised Discovery search response schema.
 
-- **FR-001-6:** Each synthetic data file SHALL be documented in `/src/m5-data/schema.md` with the exact JSON schema it conforms to, so the normaliser can validate both live and synthetic paths against the same shape.
+### segments.json
+- **FR-001-18:** SHALL define 3 segment objects matching the three boost rules: New Prospecting, Gifting Intent, High Value Returning.
 
-### Adapter files
+## Acceptance Criteria
+- [ ] `personas.json` has exactly 3 entries; all required fields present; all `demo_query` = "necklace"
+- [ ] `prs_pre_fix.json` dimension scores sum to exactly 52
+- [ ] `fix_catalogue.json` rank 1 is AutoSegment dimension
+- [ ] `products.json` has exactly 50 entries, all prices in GBP
+- [ ] No product name contains "Kendra Scott" or any real brand name
+- [ ] `products.csv` matches `products.json` (same 50 products)
+- [ ] `cached-results/` directory exists with 6 files (placeholder or populated)
 
-- **FR-001-7:** `/src/m5-data/synthetic-marketing.js` SHALL read from `segments.json` and `signals.json` and return data conforming to the Marketing MCP normalised schema.
-- **FR-001-8:** `/src/m5-data/synthetic-analytics.js` SHALL read from `tests.json` and return data conforming to the Analytics MCP normalised schema.
-- **FR-001-9:** `/src/m5-data/synthetic-discovery.js` SHALL read from `visitors.json` and `rules.json` and return data conforming to the Discovery API normalised schema.
-
-## Acceptance criteria
-
-- [ ] `archetypes.json` contains exactly 4 entries with all required fields
-- [ ] `prs_demo_state.json` scores sum to exactly 52
-- [ ] All four archetypes have search results in `search-results.json` for all three demo queries
-- [ ] Each adapter file exports a function that returns data in the expected normalised schema
-- [ ] Unit tests confirm each adapter output matches the normaliser schema
-- [ ] No live credentials required to load any synthetic file
-
-## Out of scope for this feature
-
-- Actual MCP client implementation (that is M1 — 002-mcp-integration)
-- Scoring calculations (that is M2 — 003-prs-scoring-engine)
-- UI rendering of any data
+## Out of Scope
+- Live Discovery API calls (that is M1)
+- Scoring calculations (that is M2)
+- UI rendering (that is M4)

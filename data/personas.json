@@ -1,0 +1,70 @@
+{
+  "_meta": {
+    "description": "Three KS shopper personas for the PPD demo. All use demo_query: 'necklace'. Replaces all prior archetype files.",
+    "brand": "kendra-scott",
+    "generated_at": "2026-05-22T00:00:00Z",
+    "version": "2.0"
+  },
+  "personas": [
+    {
+      "persona_id": "guest",
+      "display_name": "Guest",
+      "archetype_name": "New Prospecting",
+      "profile_description": "First visit. No login. No purchase history. Browsing broadly. Bloomreach has no BRUID — cannot serve personalised results without cookie.",
+      "login_status": "anonymous",
+      "session_count": 1,
+      "page_views": 3,
+      "product_clicks": 0,
+      "purchase_count": 0,
+      "aov": 0,
+      "segment_name": "New Prospecting",
+      "last_signal_date": null,
+      "bruid_present": false,
+      "bruid_value": null,
+      "demo_query": "necklace",
+      "plp_before_state": "Bestsellers at top — generic ranking, no personalisation active",
+      "plp_after_state": "Bestsellers at top — Rule 3 active (is_bestseller boost for New Prospecting segment)",
+      "personalisation_gap": "Without BRUID, Bloomreach cannot identify this visitor across sessions. Rule 3 targets the segment but BRUID is required for cross-session recognition."
+    },
+    {
+      "persona_id": "sarah",
+      "display_name": "Sarah",
+      "archetype_name": "Gifting",
+      "profile_description": "4 sessions, browsing gift category. Searching for others, price-sensitive. Last session within 7 days. BRUID present — Bloomreach can recognise and segment her.",
+      "login_status": "anonymous",
+      "session_count": 4,
+      "page_views": 6,
+      "product_clicks": 4,
+      "purchase_count": 0,
+      "aov": 0,
+      "segment_name": "Gifting Intent",
+      "last_signal_date": "2026-05-15",
+      "bruid_present": true,
+      "bruid_value": "_br_uid_2=sarah-gifting-demo-001",
+      "demo_query": "necklace",
+      "plp_before_state": "Generic ranking — Rule 1 INACTIVE, gift products buried",
+      "plp_after_state": "Gift sets at top — Rule 1 active (gift_eligible boost for Gifting Intent segment)",
+      "personalisation_gap": "BRUID present, segment assigned. Pre-fix: rule inactive so no personalisation. Post-fix: Rule 1 active, gift products surface at top."
+    },
+    {
+      "persona_id": "alex",
+      "display_name": "Alex",
+      "archetype_name": "High Value Returning",
+      "profile_description": "12 sessions, 3 purchases, AOV £220. Consistent premium browsing, new arrivals affinity. BRUID present. Bloomreach has rich signal history.",
+      "login_status": "logged_in",
+      "session_count": 12,
+      "page_views": 48,
+      "product_clicks": 22,
+      "purchase_count": 3,
+      "aov": 220,
+      "segment_name": "High Value Returning",
+      "last_signal_date": "2026-05-20",
+      "bruid_present": true,
+      "bruid_value": "_br_uid_2=alex-highvalue-demo-002",
+      "demo_query": "necklace",
+      "plp_before_state": "Generic ranking — Rule 2 INACTIVE, premium/new arrivals not surfaced",
+      "plp_after_state": "Premium and new arrivals at top — Rule 2 active (is_new_arrival OR price_band=premium boost for High Value Returning segment)",
+      "personalisation_gap": "Strong BRUID + 3 segment memberships + fresh signals. Pre-fix: rule inactive. Post-fix: full 1:1 personalisation active — this is the gold standard contrast against Guest."
+    }
+  ]
+}

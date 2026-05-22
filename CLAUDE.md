@@ -1,164 +1,318 @@
 # Personalization Performance Doctor — AI Context
 
 ## What this project is
-A diagnostic agent that audits how well Bloomreach Discovery's personalization is performing for an e-commerce brand. Demo persona: **Amanda Valdez, Digital Personalization Manager at Kendra Scott** (a jewelry retailer). The tool produces a Personalization Readiness Score (PRS), a ranked fix list, a static archetype simulator, and a natural-language chat interface powered by Claude. Built as a hackathon entry for the Bloomreach Loomi Connect Hackathon (deadline: Jun 2, 2026 — 4:00 PM PST / 5:30 AM IST Jun 3).
+An AI diagnostic agent that audits Bloomreach Discovery personalization health for Kendra Scott. Demo user: **Amanda Valdez, Digital Personalization Manager, Kendra Scott**. The tool scores personalization across five dimensions into a PRS (Personalization Readiness Score), explains root causes in plain English, generates a ranked fix list, shows archetype-level search result comparisons, and keeps humans in control via an approval layer.
 
-## What this project is NOT
-- Not a live Bloomreach account integration (MCP clients are present but fall back to synthetic JSON)
-- Not a production system — prototype / hackathon demo only
-- Not a write/mutation tool — all Bloomreach data access is read-only
-- Not a generic e-commerce analytics tool — scoped to Bloomreach Discovery personalization health
+Hackathon: Bloomreach Loomi Connect AI Hackathon — Build window: May 26 – Jun 2, 2026. Submission deadline: **Jun 2, 2026 — 4:00 PM PST**. Demo Day: **Jun 4, 2026**.
 
 ---
 
-## Architecture
+## Five-Component Architecture
+
+| Component | Name | What It Does | Owner |
+|---|---|---|---|
+| C1 | Next.js PLP | Product listing page. Renders Discovery search results. Persona switcher. Result caching. | TA3 |
+| C2 | Bloomreach Discovery | 50-product catalogue. BRUID tracking. Three segment-scoped boost rules (pre-created **INACTIVE**). | TA1 |
+| C3 | Bloomreach Engagement | Three persona behavioral profiles pre-seeded. Three manual segments linked to Discovery. | TA1 |
+| C4 | PPD Agent | PRS dashboard (Modules A/B/C). NL interface with true agentic tool selection. Fix list. Human approval layer. | TA1+TA2+TA3 |
+| C5 | Synthetic Data Layer | 50-product catalogue JSON/CSV. Persona event histories. PRS demo states. Fix catalogue. Cached results. | TA1+TA2 |
+
+---
+
+## Build Modules
+
+| Module | Name | Folder | Owner |
+|---|---|---|---|
+| M1 | Bloomreach Integration Layer | `/src/m1-bloomreach/` | TA1 |
+| M2 | PRS Scoring Engine | `/src/m2-scoring/` | TA2 |
+| M3 | Natural Language Interface | `/src/m3-nl/` | TA2 |
+| M4 | PPD Dashboard UI | `/src/m4-dashboard/` | TA3 |
+| M5 | Next.js PLP | `/src/m5-plp/` | TA3 |
+
+**Critical:** The integration layer folder is `/src/m1-bloomreach/` — NOT `/src/m1-mcp/`. All references must use this path.
+
+---
+
+## Directory Structure
 
 ```
 bloomreach-doctor/
-├── CLAUDE.md                              This file — loaded every session
+├── CLAUDE.md
+├── .env.example
 ├── docs/
-│   ├── AGENTIC_ENGINEERING_PLAYBOOK.md    Pipeline methodology reference
-│   └── adr/                              Architecture Decision Records
-├── contexts/                             Role context files for AI pipeline
+│   ├── AGENTIC_ENGINEERING_PLAYBOOK.md
+│   ├── PPD_Developer_Onboarding_Kit.pdf
+│   ├── mcp-tool-map.md          (Marketing + Analytics MCP tools mapped to PRS dimensions)
+│   ├── mcp-limitations.md       (which dimensions cannot be sourced live → synthetic fallback)
+│   ├── sandbox-confirmations.md (credentials confirmed + tool list per surface)
+│   ├── boost-rules.md           (three boost rules spec — IDs, conditions, activation)
+│   ├── demo-script.md           (step-by-step demo flow for recording)
+│   └── adr/
+├── contexts/                    (role context files)
 ├── handoffs/
-│   ├── PROTOCOL.md                       Pipeline rules and handoff templates
-│   └── *.md                              Per-feature role-transition handoffs
+│   ├── PROTOCOL.md
+│   └── *.md
 ├── specs/
-│   ├── 001-synthetic-data/               M5 — synthetic data & environment setup
-│   ├── 002-mcp-integration/              M1 — three MCP/API clients + normaliser
-│   ├── 003-prs-scoring-engine/           M2 — five scorers + calculator + fix generator
-│   ├── 004-nl-interface/                 M3 — NL query handler + reasoning chain + LLM explainer
-│   ├── 005-dashboard-ui/                 M4 — Module A (PRS) + B (Archetype Sim) + C (Chat) + ApprovalModal
-│   └── 006-submission-artifacts/         M6 — architecture diagram, summary, MCP doc, responsible design note, demo script
-├── tests/                                One test file per feature
-├── data/                                 Synthetic JSON (Bloomreach data shapes)
-│   ├── archetypes.json                   Four shopper archetypes (Prospective, New Customer, Gifting, Returning VIP)
-│   ├── prs_demo_state.json               Locked demo scores (52/100 Amber)
-│   ├── visitors.json                     Session-level visitor data with BRUIDs
-│   ├── segments.json                     AutoSegment definitions and coverage
-│   ├── signals.json                      Behavioral events with timestamps
-│   ├── rules.json                        Personalization rules (some conflicting)
-│   ├── tests.json                        A/B test configurations
-│   ├── search-results.json               Per-archetype search results (personalized vs generic)
-│   └── products.json                     Kendra Scott product catalog subset (20 items)
+│   ├── 001-synthetic-data/
+│   ├── 002-bloomreach-integration/
+│   ├── 003-prs-scoring-engine/
+│   ├── 004-nl-interface/
+│   ├── 005-dashboard-ui/
+│   ├── 006-nextjs-plp/
+│   └── 007-submission-artifacts/
+├── tests/
+│   └── integration/
+├── data/                        (C5 — Synthetic Data Layer)
+│   ├── products.json            (50 generic jewellery products, GBP)
+│   ├── products.csv             (same catalogue in CSV for Discovery import)
+│   ├── personas.json            (3 personas: Guest, Sarah, Alex)
+│   ├── prs_pre_fix.json         (locked 52/100 Amber — demo start state)
+│   ├── prs_post_fix.json        (70/100 Amber trending Green — demo end state)
+│   ├── fix_catalogue.json       (3 fixes, AutoSegment rank 1)
+│   ├── segments.json            (3 segment definitions)
+│   └── cached-results/          (pre-populated per persona+state for fallback)
+│       ├── guest-before.json
+│       ├── guest-after.json
+│       ├── sarah-before.json
+│       ├── sarah-after.json
+│       ├── alex-before.json
+│       └── alex-after.json
 └── src/
-    ├── m1-mcp/                           M1 — three data clients
-    │   ├── marketing-client.js           Loomi Connect MCP → AutoSegments, signal freshness
-    │   ├── analytics-client.js           Loomi Connect MCP → A/B test coverage, revenue baselines
-    │   ├── discovery-client.js           Discovery REST API → BRUID match rate, rule conflicts
-    │   └── normaliser.js                 Unifies all three sources into shared schema
-    ├── m2-scoring/                       M2 — pure-function scoring
-    │   ├── bruid-scorer.js
-    │   ├── autosegment-scorer.js
-    │   ├── signal-freshness-scorer.js
-    │   ├── rule-conflict-scorer.js
-    │   ├── ab-test-scorer.js
-    │   ├── prs-calculator.js             Sums 5 sub-scores → PRS 0–100
-    │   └── fix-generator.js              Ranks fixes by revenue impact
-    ├── m3-nl/                            M3 — NL interface (Module C)
-    │   ├── intent-classifier.js          Classifies query intent
-    │   ├── reasoning-chain.js            Decides which tools to call
-    │   ├── tool-executor.js              Calls MCP/API clients
-    │   └── llm-explainer.js             Claude API → structured explanation
-    ├── m4-ui/                            M4 — React UI
-    │   ├── components/
-    │   │   ├── ModuleA/                  PRS Scorecard tab
-    │   │   ├── ModuleB/                  Archetype Simulator tab (static)
-    │   │   ├── ModuleC/                  NL Chat Interface tab ("Ask the Doctor")
-    │   │   └── ApprovalModal/            Human-in-the-loop fix approval modal
-    │   └── App.tsx
-    └── m5-data/                          M5 — data adapters (one per client)
-        ├── synthetic-marketing.js
-        ├── synthetic-analytics.js
-        └── synthetic-discovery.js
+    ├── m1-bloomreach/
+    │   ├── discovery-client.js       (BRUID match rate, rule conflict detection)
+    │   ├── engagement-client.js      (persona profiles, segment management)
+    │   ├── marketing-mcp-client.js   (AutoSegment coverage, signal freshness)
+    │   ├── analytics-mcp-client.js   (A/B test coverage, revenue baselines)
+    │   ├── normaliser.js             (unifies all sources → common dimension schema)
+    │   └── rule-manager.js           (reads rule activation state from Discovery)
+    ├── m2-scoring/
+    │   ├── dimension-scorers.js      (5 scorer functions in one file)
+    │   ├── prs-calculator.js         (sums 5 sub-scores → composite PRS + RAG)
+    │   ├── fix-generator.js          (ranks bottom dimensions → maps to fix_catalogue)
+    │   └── __tests__/
+    ├── m3-nl/
+    │   ├── query-handler.js          (entry point — classifies intent, orchestrates)
+    │   ├── reasoning-chain.js        (assembles context object for LLM)
+    │   ├── tools-registry.js         (registers M1 fetchers as Claude tools)
+    │   ├── llm-explainer.js          (ONLY file that imports @anthropic-ai/sdk)
+    │   └── response-formatter.js     (formats agent response for M4)
+    ├── m4-dashboard/
+    │   ├── App.tsx
+    │   ├── modules/
+    │   │   ├── PRSScorecard.tsx      (Module A)
+    │   │   ├── ShopperSimulator.tsx  (Module B — live Discovery calls)
+    │   │   └── NLChat.tsx            (Module C)
+    │   └── components/
+    │       ├── ApprovalModal.tsx
+    │       └── ScoreDial.tsx
+    └── m5-plp/
+        ├── app/page.tsx
+        ├── components/PersonaSwitcher.tsx
+        ├── components/ProductCard.tsx
+        ├── lib/resultCache.ts
+        └── lib/discoveryClient.ts
 ```
 
 ---
 
-## Three data surfaces (NOT one MCP pipe)
+## Three Personas
 
-This is critical. The integration layer has **three separate clients**:
+| Persona | Display Name | Segment | BRUID | Demo Query |
+|---|---|---|---|---|
+| New Prospecting | Guest | New Prospecting | null (no cookie) | "necklace" |
+| Gifting | Sarah | Gifting Intent | Pre-seeded from Engagement | "necklace" |
+| High Value Returning | Alex | High Value Returning | Pre-seeded from Engagement | "necklace" |
 
-| Client | File | Source type | Data provided |
+**All three use the same query: "necklace" (hardcoded in PLP).** No per-persona queries.
+
+Full profiles in `/data/personas.json`.
+
+---
+
+## PRS Demo States
+
+### Pre-Fix State — 52/100 Amber (demo start)
+
+| Dimension | Raw Input | Score | Status | Data Source |
+|---|---|---|---|---|
+| BRUID Match Rate | 0.22 (22%) | 8/20 | critical | Discovery API |
+| AutoSegment Coverage | 0.14 (14%) | 6/20 | critical | Marketing MCP |
+| Signal Freshness | 0.58 (58%) | 14/20 | warning | Marketing MCP |
+| Rule Conflicts | 0.95 (95% conflict-free) | 18/20 | healthy | Discovery API |
+| A/B Test Coverage | 0.14 (14%) | 6/20 | critical | Analytics MCP |
+| **TOTAL** | | **52/100** | **Amber** | |
+
+### Post-Fix State — 70/100 Amber trending Green (demo end)
+
+| Dimension | Raw Input | Score | Status | Change Driver |
+|---|---|---|---|---|
+| BRUID Match Rate | 0.22 | 8/20 | critical | No change — strategic fix |
+| AutoSegment Coverage | 0.68 | 16/20 | healthy | Segments created + rules active |
+| Signal Freshness | 0.58 | 14/20 | warning | No change |
+| Rule Conflicts | 0.90 | 16/20 | healthy | Minor — 3 new rules added |
+| A/B Test Coverage | 0.14 | 6/20 | critical | No change |
+| **TOTAL** | | **60/100** | **Amber** | |
+
+> **⚠️ ARITHMETIC FLAG:** The post-fix dimension scores (8+16+14+16+6) sum to **60**, not 70 as stated in the spec. The individual dimension scores are used as canonical. Architect must resolve: either some dimension scores are wrong, or the total is wrong. **Do not change dimension scores without human confirmation.**
+
+Scoring formula: `score = round(raw_percentage × 20)`, capped at 20. Status: 0–8 = critical, 9–14 = warning, 15–20 = healthy.
+
+> **⚠️ FORMULA FLAG:** The stated formula `round(raw × 20)` does not produce the stated scores from the stated raw values (e.g. round(0.22 × 20) = 4, not 8). Architect must reconcile formula with locked scores before Dev implements scorers.
+
+---
+
+## Fix Catalogue — Ranked Order
+
+| Rank | Fix | Dimension | Est. RPV Lift |
 |---|---|---|---|
-| Marketing client | `src/m1-mcp/marketing-client.js` | Loomi Connect MCP (HTTP) | AutoSegment coverage, signal freshness |
-| Analytics client | `src/m1-mcp/analytics-client.js` | Loomi Connect MCP (HTTP) | A/B test coverage, revenue baselines |
-| Discovery client | `src/m1-mcp/discovery-client.js` | Discovery REST API (separate auth) | BRUID match rate, rule conflict detection |
+| 1 | Create 3 manual audience segments | AutoSegment Coverage | 12–18% |
+| 2 | Enable BRUID persistence for guest sessions | BRUID Match Rate | 8–15% |
+| 3 | Configure segment-scoped boost rules | Rule Conflicts | 5–10% |
 
-Each client has a synthetic fallback: if the live call fails or returns empty, fall back to the corresponding synthetic JSON in `/data/`. Both paths produce the same normalized schema (enforced by `normaliser.js`).
-
----
-
-## Four shopper archetypes (Module B)
-
-| Archetype | Demo query |
-|---|---|
-| Prospective — first visit, no login, browsing broadly | "necklace" |
-| New Customer — purchased once, limited signal | "yellow rose" |
-| Gifting Shopper — high intent, seasonal, price-sensitive | "necklace gift" |
-| Returning VIP — repeat purchaser, known preferences, high LTV | "necklace gift" |
-
-Full archetype profiles in `/data/archetypes.json`.
+Fix list from pre-fix state: rank 1 = AutoSegment, rank 2 = BRUID, rank 3 = A/B Coverage (sorted by score ascending, mapped to catalogue by revenue impact descending).
 
 ---
 
-## Demo scenario — locked PRS values
+## Option X — Live Demo Mechanic
 
-| Dimension | Source | Score | Status |
+**This is the centrepiece of the demo.**
+
+1. **Pre-demo:** All three boost rules are INACTIVE in Discovery merchandising UI
+2. **During demo:** TA1 toggles rules from INACTIVE → ACTIVE in Discovery
+3. **PLP results change in real time** per persona
+4. **PRS dashboard refreshes** from 52/100 → 70/100
+
+### Three Boost Rules (pre-created INACTIVE)
+
+| Rule | Audience Segment | Boost Condition | State |
 |---|---|---|---|
-| BRUID Match Rate | Discovery API | 8/20 | critical |
-| AutoSegment Coverage | Marketing MCP | 12/20 | warning |
-| Signal Freshness | Marketing MCP | 14/20 | warning |
-| Rule Conflicts | Discovery API | 10/20 | warning |
-| A/B Test Coverage | Analytics MCP | 8/20 | critical |
-| **TOTAL** | | **52/100** | **Amber** |
+| Rule 1 | Gifting Intent | `gift_eligible = true` | **INACTIVE** |
+| Rule 2 | High Value Returning | `is_new_arrival = true` OR `price_band = premium` | **INACTIVE** |
+| Rule 3 | New Prospecting | `is_bestseller = true` | **INACTIVE** |
 
-RAG thresholds: Red < 50, Amber 50–74, Green 75+. BRUID Match Rate must be the top-ranked fix. The scoring engine must produce exactly 52/100 from `data/prs_demo_state.json`.
+**Option Y fallback** (only if Discovery rule propagation > 60 seconds): pre-record two PLP states, cut into demo video.
 
 ---
 
-## Module C — NL Chat Interface ("Ask the Doctor")
+## Module C — True Agentic Tool Selection
 
-Module C is the most critical component for the "Agent Behaviour & Intelligence" judging criterion (20% of score). It demonstrates: **understand → decide → recommend**.
+Module C uses Claude `claude-sonnet-4-20250514` with **native tool use (function calling)**. The five M1 data fetcher functions are registered as tools. Claude selects which tools to call at runtime. `tool_choice: { type: "auto" }`.
 
-Flow:
-1. User types plain-English question (e.g., "Why is 1:1 personalization not working?")
-2. Intent classifier categorises: diagnosis | fix-request | dimension-drill | archetype-compare
-3. Reasoning chain decides which MCP tools / API calls to make
-4. Tool executor calls the relevant clients
-5. Evidence passed to Claude (`claude-sonnet-4-20250514`) for explanation
-6. Response rendered with TWO visible sections:
-   - **Collapsed "Reasoning trace"** panel — which tools were called and why
-   - **Expanded plain-English explanation** — summary, score breakdown, top fixes, next action
+**This is NOT manual orchestration.** Claude decides which tools to call.
 
-Pre-loaded demo exchange: "Why is 1:1 personalization not working?" → full agent response showing reasoning trace.
+The reasoning trace is extracted from `tool_use` and `tool_result` content blocks in the Claude API response.
+
+### Intent → Expected Tool Selection
+
+| Intent | Example Query | Tools Selected |
+|---|---|---|
+| diagnosis | "Why is my personalisation not working?" | All 5 tools |
+| fix-request | "What should I fix first?" | Bottom 2 dimension tools + fix catalogue |
+| dimension-drill | "Why is my BRUID score so low?" | `fetchBRUIDMatchRate` only |
+| archetype-compare | "Show me what good personalisation looks like for my top 3 customer types" | `fetchAutoSegmentCoverage` + `fetchSignalFreshness` + persona data |
+
+Three pre-loaded quick-action chips in Module C:
+1. "Why is my personalisation not working?"
+2. "What should I fix first?"
+3. "Show me what good personalisation looks like for my top 3 customer types"
+
+**Option B fallback** (manual orchestration): activate ONLY if Option A not working by end of Day 3. Scores lower on Agent Behaviour criterion.
 
 ---
 
-## ApprovalModal (human-in-the-loop)
+## Module B — Live Shopper Simulator
 
-Required for "Responsible Design" submission artifact. Props: `action_title`, `action_description`, `estimated_impact`, `risk_level`. Three buttons:
-- **Approve** (teal `#0E7C7B`) → confirmation state "Action logged for review by your team"
-- **Review Later** (grey)
-- **Dismiss** (text link)
+Module B is **NOT a static mockup**. It pulls live results from Discovery.
+
+- Three persona tabs: Guest, Sarah, Alex
+- Before/After toggle at top
+- Each persona + state calls Discovery search API with correct BRUID context
+- Rank position numbers on product cards
+- Rank change indicators: teal ↑ (moved up), grey ↓ (moved down) — comparing after vs before
+- Banner: "Before: generic ranking — After: personalised results following Doctor recommendations."
+- Reuses result caching from M5 PLP — no duplicate Discovery calls
+- `/data/cached-results/` as final fallback
 
 ---
 
-## Design palette
+## Module Integration Contracts (binding)
+
+### M1 → M2: Normalised Dimension Array
+Array of 5 objects. Per object:
+```json
+{
+  "dimension_id": "string",
+  "raw_value": "float 0.0–1.0",
+  "normalised_score": "int 0–20",
+  "status": "critical|warning|healthy",
+  "data_source": "marketing_mcp|analytics_mcp|discovery_api",
+  "timestamp": "ISO8601",
+  "is_synthetic": "boolean"
+}
+```
+
+### M2 → M4: PRS State Object
+```json
+{
+  "composite_score": "int 0–100",
+  "rag_status": "red|amber|green",
+  "dimensions": "array of 5 dimension results",
+  "fix_list": "array of 3 fix objects",
+  "generated_at": "ISO8601"
+}
+```
+
+### M3 → M4: Agent Response Object
+```json
+{
+  "query": "string",
+  "intent": "string",
+  "reasoning_trace": [{ "tool_name": "", "tool_input": {}, "tool_output_summary": "" }],
+  "llm_response": {
+    "summary_sentence": "",
+    "score_breakdown": "",
+    "top_3_fixes": [],
+    "suggested_next_action": ""
+  },
+  "timestamp": "ISO8601"
+}
+```
+
+### M5 ↔ M4 Module B
+Both call Discovery search API. Both use M5's result cache layer. No duplicate calls.
+
+---
+
+## ApprovalModal — NO API write
+
+The approval modal records intent in **application state only**. No API write call is made. The Discovery rule toggle is a **separate manual action** performed by TA1 in the Discovery merchandising UI during the demo.
+
+---
+
+## Design Palette
 
 | Token | Value | Usage |
 |---|---|---|
-| Navy | `#1B3A5C` | Header, nav |
-| Teal | `#0E7C7B` | Active state, CTA, Approve button |
-| Amber | warm amber | Warning indicators |
-| White | `#FFFFFF` | Content area background |
-| Red | system red | PRS < 50 |
-| Green | system green | PRS 75+ |
+| Navy | `#1B3A5C` | Header, labels |
+| Teal | `#0E7C7B` | Active tab, CTAs, Approve button |
+| Amber | `#F59E0B` | Warning indicators, PRS 50–74 |
+| White | `#FFFFFF` | Card backgrounds |
+| Red | `#DC2626` | PRS < 50 |
+| Green | `#16A34A` | PRS 75+ |
 
 ---
 
-## Agentic engineering structure
-This project uses a spec-driven, role-based pipeline. See `contexts/` and `handoffs/`.
+## Mandatory Jest Tests
+
+```
+Test 1: prs_pre_fix.json → composite 52, rag_status "amber", BRUID and AutoSegment status "critical"
+Test 2: prs_post_fix.json → composite [locked value], rag_status "amber", AutoSegment status "healthy"
+Test 3: fix list from pre-fix → rank 1 = AutoSegment, rank 2 = BRUID, rank 3 = A/B Coverage
+```
+
+---
+
+## Agentic Engineering Pipeline
 
 To start the orchestrator:
 ```
@@ -170,99 +324,127 @@ Wait for my approval before doing anything.
 
 ---
 
-## Key invariants — do not break these
+## Key Invariants — Do Not Break
 
-1. **Three clients, not one.** Marketing MCP, Analytics MCP, and Discovery REST are separate. Never merge them into a single client.
-2. **Each client has a synthetic fallback.** Fallback must produce the exact same schema as the live path. Tested.
-3. **Scoring functions are pure.** `src/m2-scoring/` functions take data objects, return numbers. No side effects, no async, no API calls.
-4. **No live Bloomreach credentials in source.** All secrets via environment variables only.
-5. **Specs before code.** No implementation starts until `requirements-spec.md` has `status: approved`.
-6. **Tests are not optional.** Every feature ships with a passing test file in `tests/`.
-7. **Read-only Bloomreach access.** The MCP clients must never call write/mutation tools.
-8. **Claude API calls go through `src/m3-nl/llm-explainer.js` only.** No other file imports the Anthropic SDK.
-9. **Module B is static.** The Archetype Simulator makes zero live API calls. All data loaded from `/data/` at page load.
-10. **PRS demo produces exactly 52/100.** Do not adjust scores without updating `data/prs_demo_state.json` and this file.
+1. **M1 folder is `/src/m1-bloomreach/`** — never `/src/m1-mcp/`
+2. **Four separate M1 clients** — discovery, engagement, marketing-mcp, analytics-mcp. Never merged.
+3. **Each client has a synthetic fallback** — same schema both paths. Tested.
+4. **Scoring functions are pure** — `src/m2-scoring/` only. No async, no side effects.
+5. **`llm-explainer.js` is the only file that imports `@anthropic-ai/sdk`**
+6. **Module C uses Claude native tool use** — `tool_choice: auto`. Claude decides which tools to call.
+7. **Module B is live** — it calls Discovery search API. Never revert to static mockup.
+8. **ApprovalModal = NO API write** — application state only.
+9. **Currency is GBP throughout** — no USD in product data.
+10. **Three personas only** — Guest, Sarah, Alex. No fourth persona.
+11. **Demo query is "necklace" for all three personas** — hardcoded.
+12. **No real Kendra Scott product data** — all 50 products are generic jewellery.
+13. **No secrets in source** — all via `.env` / environment variables.
+14. **Specs before code** — no implementation until `requirements-spec.md` is `status: approved`.
 
 ---
 
-## Feature pipeline (M1–M6)
+## Feature Pipeline
 
-| Spec ID | Module | Feature name | Folder | Req | Arch | Design | Impl | Test |
-|---|---|---|---|---|---|---|---|---|
-| 001 | M5 | Synthetic Data & Environment | /data/ | draft | ⬜ | ⬜ | ⬜ | ⬜ |
-| 002 | M1 | MCP Integration Layer | /src/m1-mcp/ | draft | ⬜ | ⬜ | ⬜ | ⬜ |
-| 003 | M2 | PRS Scoring Engine | /src/m2-scoring/ | draft | ⬜ | ⬜ | ⬜ | ⬜ |
-| 004 | M3 | NL Interface (Ask the Doctor) | /src/m3-nl/ | draft | ⬜ | ⬜ | ⬜ | ⬜ |
-| 005 | M4 | Dashboard UI (A + B + C + Modal) | /src/m4-ui/ | draft | ⬜ | ⬜ | ⬜ | ⬜ |
-| 006 | M6 | Submission Artifacts | /docs/ | draft | ⬜ | ⬜ | ⬜ | ⬜ |
+| Spec | Module | Feature | Req | Arch | Design | Impl | Test |
+|---|---|---|---|---|---|---|---|
+| 001 | C5 | Synthetic Data Layer | draft | ⬜ | ⬜ | ⬜ | ⬜ |
+| 002 | M1 | Bloomreach Integration Layer | draft | ⬜ | ⬜ | ⬜ | ⬜ |
+| 003 | M2 | PRS Scoring Engine | draft | ⬜ | ⬜ | ⬜ | ⬜ |
+| 004 | M3 | Natural Language Interface | draft | ⬜ | ⬜ | ⬜ | ⬜ |
+| 005 | M4 | PPD Dashboard UI | draft | ⬜ | ⬜ | ⬜ | ⬜ |
+| 006 | M5 | Next.js PLP | draft | ⬜ | ⬜ | ⬜ | ⬜ |
+| 007 | — | Submission Artifacts | draft | ⬜ | ⬜ | ⬜ | ⬜ |
 
-**Build dependency chain:**
-- 001 (M5) → unblocks 003 and 004 in parallel
+Build dependency chain:
+- 001 (C5) → unblocks 002, 003, 004 in parallel
 - 002 (M1) → feeds 003 (M2) → feeds 005 (M4)
 - 002 (M1) → feeds 004 (M3) → feeds 005 (M4)
-- 006 (M6) requires 002 architecture + 005 demo to be stable
+- 002 (M1) → feeds 006 (M5)
+- 007 requires 002 architecture stable + 005 demo stable
 
 ---
 
-## TODOs (known gaps, not bugs)
-- Loomi Connect MCP server URL not yet available — all three clients fall back to synthetic JSON
-- Architecture, design, implementation, and testing specs not yet written (awaiting requirements approval)
-- React app scaffold not yet created
-- Old spec folders (specs/001-readiness-dashboard/, specs/002-shopper-simulator/, specs/003-agent-diagnosis/) are superseded by the new M1–M6 structure — can be archived
+## Out of Scope
+
+Do NOT build:
+- BRUID persistence configuration (Phase 2)
+- Amperity CDP integration (Phase 3)
+- Approval modal triggering live API writes (Phase 2)
+- Real Kendra Scott product data (post-hackathon)
+- Monetate A/B test integration (not planned)
+- More than 3 personas
+- A fourth "browse-only teen" or "sale hunter" persona
 
 ---
 
-## Running locally
-```bash
-npm install
-npm run dev
-npm test
+## Branch Structure
+
+```
+main       (protected — only merged releases)
+dev        (integration — all features merge here first)
+feature/m1-bloomreach
+feature/m2-scoring
+feature/m3-nl
+feature/m4-dashboard
+feature/m5-plp
 ```
 
-## Environment variables
+---
+
+## TODOs (known gaps)
+
+- Bloomreach sandbox credentials not yet received — all clients fall back to synthetic
+- Architecture, design, implementation, testing specs not yet written (awaiting requirements approval)
+- Post-fix total arithmetic discrepancy (8+16+14+16+6=60, spec says 70) — needs human confirmation
+- Scoring formula discrepancy — `round(raw×20)` does not produce stated scores — Architect must resolve
+- Old spec folders (001-readiness-dashboard, 002-shopper-simulator, 003-agent-diagnosis, 002-mcp-integration) are superseded
+
+---
+
+## Running Locally
+
+```bash
+npm install
+npm run dev          # M4 dashboard (React/Vite)
+npm run dev:plp      # M5 Next.js PLP
+npm test             # Jest unit tests
+npm run test:e2e     # Integration test (full demo flow)
+```
+
+## Environment Variables
 
 | Variable | Required | Default | Notes |
 |---|---|---|---|
-| `ANTHROPIC_API_KEY` | Yes (M3) | — | Claude API for NL interface (Module C) |
-| `LOOMI_CONNECT_MARKETING_URL` | No | — | Marketing MCP endpoint when available |
-| `LOOMI_CONNECT_ANALYTICS_URL` | No | — | Analytics MCP endpoint when available |
-| `BLOOMREACH_DISCOVERY_API_KEY` | No | — | Discovery REST API auth (separate from MCP) |
-| `DATA_SOURCE` | No | `synthetic` | `synthetic` or `live` — controls all three client adapters |
-| `CLAUDE_MODEL` | No | `claude-sonnet-4-20250514` | Override Claude model for M3 |
-| `VITE_APP_DEMO_BRAND` | No | `kendra-scott` | Brand name shown in UI |
+| `BLOOMREACH_DISCOVERY_API_KEY` | Yes (M1) | — | Discovery REST API auth |
+| `BLOOMREACH_ENGAGEMENT_API_KEY` | Yes (M1) | — | Engagement API auth |
+| `BLOOMREACH_MCP_MARKETING_URL` | No | — | Marketing MCP endpoint |
+| `BLOOMREACH_MCP_ANALYTICS_URL` | No | — | Analytics MCP endpoint |
+| `ANTHROPIC_API_KEY` | Yes (M3) | — | Claude API — Module C |
+| `NEXT_PUBLIC_DISCOVERY_ENDPOINT` | Yes (M5) | — | Discovery search endpoint for PLP |
+| `DATA_SOURCE` | No | `synthetic` | `synthetic` or `live` |
+| `CLAUDE_MODEL` | No | `claude-sonnet-4-20250514` | Override Claude model |
 
 ---
 
-## Judging criteria (20% each — know what we are optimising for)
+## Judging Criteria (20% each)
 
-| # | Criterion | How we address it |
-|---|---|---|
-| 1 | **Problem Relevance & Clarity** | Real user (Amanda Valdez), real problem (silent personalization failure), legible PRS score |
-| 2 | **MCP Utilization & Depth** | Marketing MCP + Analytics MCP used meaningfully with specific tool calls shown in reasoning trace |
-| 3 | **Agent Behaviour & Intelligence** | Module C: understand → decide → recommend chain with visible reasoning trace in UI |
-| 4 | **Execution Quality & Feasibility** | Sound M1–M6 architecture, synthetic fallbacks, ApprovalModal for responsible design, passing tests |
-| 5 | **Innovation & Differentiation** | PRS as a new abstraction; archetype simulator; human-in-the-loop fix approval |
-
-**Criterion 3 (Agent Behaviour) is the highest-risk.** Module C must be demo-ready. Prioritise it if time is short.
+| Criterion | How We Address It |
+|---|---|
+| Problem Relevance & Clarity | Real quote from Amanda Valdez. Real failing 1:1 test. 52/100 PRS tells the story immediately. |
+| MCP Utilization & Depth | Marketing MCP (segments/signals) + Analytics MCP (A/B) used with specific tool calls shown in reasoning trace. |
+| Agent Behaviour & Intelligence | Module C: Claude native tool use, `tool_choice: auto`. Reasoning trace visible in UI. |
+| Execution Quality & Feasibility | Deterministic scoring engine. Two PRS states. Synthetic fallbacks. Passing Jest tests. |
+| Innovation & Differentiation | PRS as novel abstraction. Live before/after via Option X. Human-in-loop approval layer. |
 
 ---
 
-## Submission artifacts (6 required — deadline Jun 2 4 PM PST)
+## Submission Artifacts (deadline Jun 2 4 PM PST)
 
 | # | Artifact | Location | Status |
 |---|---|---|---|
 | 1 | Project summary (500 words) | docs/submission/project-summary.md | ⬜ |
 | 2 | Demo video (5–6 min) | — | ⬜ |
-| 3 | Architecture overview diagram | docs/submission/architecture-diagram.md | ⬜ |
+| 3 | Architecture overview | docs/submission/architecture-diagram.md | ⬜ |
 | 4 | MCP usage explanation | docs/submission/mcp-usage.md | ⬜ |
 | 5 | Responsible design note | docs/submission/responsible-design.md | ⬜ |
 | 6 | Team details | docs/submission/team.md | ⬜ |
-
----
-
-## Business impact targets
-- PRS of 75+ within 90 days of tool adoption
-- BRUID match rate: 70%+ (currently 40% in demo — top fix)
-- AutoSegment coverage: 75%+
-- Revenue per visit lift: 15%+
-- At least 60% of recommended fixes acted on

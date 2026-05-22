@@ -5,64 +5,64 @@ module: M2
 phase: requirements
 owner: PM
 status: draft
-version: "1.0"
+version: "2.0"
 entry_criteria:
-  - 001-synthetic-data requirements-spec.md is approved
-  - 002-mcp-integration requirements-spec.md is approved
-  - prs_demo_state.json locked scores are confirmed (52/100)
+  - 001-synthetic-data approved
+  - 002-bloomreach-integration approved
+  - prs_pre_fix.json locked (52/100) and prs_post_fix.json arithmetic confirmed
 exit_criteria:
-  - All 5 scoring formulas specified with exact thresholds
+  - All 5 scoring formulas specified (or formula discrepancy resolved by Architect)
   - Fix generator logic specified
-  - Acceptance criteria include deterministic output check against locked demo scores
+  - Jest test cases defined with exact input/output assertions
   - Human has set status to approved
 ---
 
 # Requirements Spec — PRS Scoring Engine (003 / M2)
 
 ## Problem
+The M1 data layer returns normalised dimension objects. M2 translates those into sub-scores (0–20 each), sums them to the composite PRS (0–100), applies RAG status, and generates the ranked fix list. All functions must be pure, deterministic, and produce exactly the locked demo values.
 
-The PRS (Personalization Readiness Score) needs to be computed from data returned by the three MCP/API clients. The scoring must be deterministic, pure, and independently testable — it must not depend on UI state, API calls, or React rendering. Every scoring function must produce exactly the locked demo values from `prs_demo_state.json`.
+## Functional Requirements
 
-## User stories
+### dimension-scorers.js (all five in one file)
 
-- **US-003-1:** As Amanda Valdez (the demo user), I want to see a single 0–100 score so I can understand my personalization health at a glance.
-- **US-003-2:** As Amanda, I want to see which dimension is hurting my score most so I know where to focus first.
-- **US-003-3:** As Amanda, I want to see ranked fix recommendations with estimated revenue impact so I can justify the work to my VP.
+- **FR-003-1:** `scoreBRUID({ raw_value })` SHALL return `{ dimension_id, score, max_score: 20, status, explanation }`. Locked demo: input 0.22 → score 8, status "critical".
+- **FR-003-2:** `scoreAutoSegment({ raw_value })` SHALL return same shape. Locked demo: input 0.14 → score 6, status "critical".
+- **FR-003-3:** `scoreSignalFreshness({ raw_value })` SHALL return same shape. Locked demo: input 0.58 → score 14, status "warning".
+- **FR-003-4:** `scoreRuleConflicts({ raw_value })` SHALL return same shape. Note: higher raw_value = healthier (raw_value is conflict-FREE percentage). Locked demo: input 0.95 → score 18, status "healthy".
+- **FR-003-5:** `scoreABCoverage({ raw_value })` SHALL return same shape. Locked demo: input 0.14 → score 6, status "critical".
+- **FR-003-6:** Status thresholds: 0–8 = "critical", 9–14 = "warning", 15–20 = "healthy".
+- **FR-003-7:** ⚠️ **FORMULA FLAG:** The stated formula `round(raw×20)` does not produce the stated scores (e.g. round(0.22×20)=4 not 8). Architect MUST resolve the correct formula before Dev implements. The locked demo input/output pairs above are canonical regardless of formula.
+- **FR-003-8:** All scorer functions SHALL be pure — no imports from react, no async, no global state, no imports from `data/` directory.
 
-## Functional requirements
+### prs-calculator.js
 
-### Scorers (all pure functions — no side effects, no async)
+- **FR-003-9:** `calculatePRS(dimensionResults)` SHALL accept array of 5 scorer outputs, sum `score` fields, apply RAG thresholds, and return M2→M4 PRS state object.
+- **FR-003-10:** RAG: `composite_score < 50` = "red", `50–74` = "amber", `75+` = "green".
+- **FR-003-11:** Pre-fix output: `composite_score: 52, rag_status: "amber"`. Post-fix: `composite_score: [confirmed total], rag_status: "amber"`.
 
-- **FR-003-1 (BRUID):** `bruid-scorer.js` SHALL accept `{ bruid_match_rate }` and return a sub-score 0–20. Formula: `Math.round((bruid_match_rate / 0.70) * 20)`, capped at 20. Demo input: `0.40` → output: `8`.
-- **FR-003-2 (AutoSegment):** `autosegment-scorer.js` SHALL accept `{ autosegment_coverage_rate }` and return a sub-score 0–20. Formula: `Math.round((autosegment_coverage_rate / 0.75) * 20)`, capped at 20. Demo input: `0.45` → output: `12`.
-- **FR-003-3 (Signal Freshness):** `signal-freshness-scorer.js` SHALL accept `{ signal_freshness_band }` and return a stepped sub-score. Bands: `lt_24h` → 20, `24h_to_72h` → 14 (demo value: `14`), `3d_to_7d` → 8, `gt_7d` → 0. Demo input: `'24h_to_72h'` → output: `14`.
-- **FR-003-4 (Rule Conflicts):** `rule-conflict-scorer.js` SHALL accept `{ detected_conflicts }` and return a stepped sub-score. 0 conflicts → 20, 1 → 14, 2 → 10 (demo value: `10`), 3+ → 0. Demo input: `2` → output: `10`.
-- **FR-003-5 (A/B Test Coverage):** `ab-test-scorer.js` SHALL accept `{ ab_test_coverage_rate }` and return a sub-score 0–20. Formula: `Math.round((ab_test_coverage_rate / 0.60) * 20)`, capped at 20. Demo input: `0.4286` → output: `8` (note: `Math.round(0.4286/0.60 * 20) = Math.round(14.29) = 14` — **OVERRIDE: use locked value 8 from prs_demo_state.json**).
+### fix-generator.js
 
-  > **Note for Architect:** The A/B Test Coverage raw rate (0.4286) with the above formula produces 14, not 8. The locked demo value of 8 implies either a different formula or a different raw input. Resolve in architecture-spec.md before Dev implements. Possible resolution: use `rules_with_test / total_rules_including_inactive` instead of active-only.
+- **FR-003-12:** `generateFixList(prsResult)` SHALL sort dimensions by `score` ascending (lowest first), take bottom 3, map each to its fix object from `fix_catalogue.json`, sort mapped results by `estimated_rpv_lift_pct_max` descending.
+- **FR-003-13:** From pre-fix state, rank 1 SHALL be AutoSegment (score 6), rank 2 BRUID (score 8), rank 3 A/B Coverage (score 6 — tiebreak by revenue impact: A/B vs AutoSegment already at rank 1).
+- **FR-003-14:** Each returned fix object SHALL include: `position`, `dimension`, `fix_title`, `description`, `effort`, `revenue_impact`, `action_label`.
 
-- **FR-003-6 (PRS Calculator):** `prs-calculator.js` SHALL accept the five sub-scores and return their sum. Demo: `8 + 12 + 14 + 10 + 8 = 52`.
-- **FR-003-7:** All scorers SHALL be tested with the exact demo input/output pairs listed in FR-003-1 through FR-003-5. Any scorer that does not produce the locked demo value MUST be flagged to the human before shipping.
+### Jest Tests (mandatory — tests/m2-scoring/)
 
-### Fix generator
+- **FR-003-15:** Test 1: `prs_pre_fix.json` input → `composite_score === 52`, `rag_status === "amber"`, BRUID and AutoSegment `status === "critical"`.
+- **FR-003-16:** Test 2: `prs_post_fix.json` input → `composite_score === [confirmed total]`, `rag_status === "amber"`, AutoSegment `status === "healthy"`.
+- **FR-003-17:** Test 3: fix list from pre-fix state → `fix_list[0].dimension === "autosegment_coverage"`, `fix_list[1].dimension === "bruid_match_rate"`, `fix_list[2].dimension === "ab_test_coverage"`.
+- **FR-003-18:** Each scorer function SHALL have at least 3 input/output test cases.
 
-- **FR-003-8:** `fix-generator.js` SHALL accept the five sub-scores and return a ranked array of fix recommendations, sorted by estimated revenue impact (highest first).
-- **FR-003-9:** Each fix object SHALL contain: `dimension`, `current_score`, `max_score`, `gap`, `one_line_issue`, `estimated_rpv_lift_pct`, `fix_action`, `risk_level`.
-- **FR-003-10:** BRUID Match Rate SHALL always rank #1 in the demo scenario (gap of 12 points, largest single gap).
-- **FR-003-11:** Revenue impact estimates SHALL be labelled as estimates in the UI. Stated assumption: "Based on Bloomreach benchmarks — 1 point of BRUID match rate improvement ≈ 0.5% RPV lift."
+## Acceptance Criteria
+- [ ] All 5 scorer functions in one file `dimension-scorers.js`
+- [ ] Scorer unit tests pass for all locked demo input/output pairs
+- [ ] `calculatePRS` returns `composite_score: 52` from pre-fix input
+- [ ] Fix generator returns AutoSegment as rank 1 from pre-fix state
+- [ ] All Jest tests pass before Dev hands off to QA
+- [ ] No imports from `data/` inside any scorer function
 
-## Acceptance criteria
-
-- [ ] All 5 scorer functions are pure (no imports from react, no async, no global state)
-- [ ] Scorer unit tests pass for all demo input/output pairs: 8, 12, 14, 10, 8
-- [ ] PRS calculator returns exactly 52 given those five sub-scores
-- [ ] Fix generator returns BRUID Match Rate as the #1 ranked fix for the demo state
-- [ ] Each fix object contains all required fields
-- [ ] No imports from `data/` or `src/m1-mcp/` inside any scorer — data is passed in as arguments
-
-## Out of scope for this feature
-
-- NL generation of fix explanations (that is M3 — 004-nl-interface)
-- UI rendering (that is M4 — 005-dashboard-ui)
+## Out of Scope
+- NL generation of explanations (M3)
+- UI rendering (M4)
 - Storing or persisting scores
-- Historical score trending

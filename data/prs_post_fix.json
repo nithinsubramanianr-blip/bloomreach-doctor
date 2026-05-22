@@ -1,0 +1,101 @@
+{
+  "_meta": {
+    "description": "POST-FIX PRS demo state. This is the demo END state after Option X rule activation. Spec states 70/100 but dimension scores sum to 60. Flagged — awaiting human confirmation.",
+    "state": "post_fix",
+    "locked": true,
+    "generated_at": "2026-05-22T00:00:00Z",
+    "arithmetic_flag": "NEEDS HUMAN CONFIRMATION: stated individual scores (8+16+14+16+6) sum to 60, NOT 70 as specified. Dimension scores below are used as canonical. The composite_score field reflects the arithmetic sum (60) pending resolution."
+  },
+  "composite_score": 60,
+  "composite_score_spec_stated": 70,
+  "rag_status": "amber",
+  "rag_thresholds": {
+    "red": { "min": 0, "max": 49 },
+    "amber": { "min": 50, "max": 74 },
+    "green": { "min": 75, "max": 100 }
+  },
+  "boost_rules_state": "all_active",
+  "dimensions": [
+    {
+      "dimension_id": "bruid_match_rate",
+      "dimension_name": "BRUID Match Rate",
+      "raw_value": 0.22,
+      "raw_label": "22% — no change (strategic fix, not in build window)",
+      "normalised_score": 8,
+      "max_score": 20,
+      "status": "critical",
+      "data_source": "discovery_api",
+      "client": "discovery-client",
+      "change_from_pre_fix": 0,
+      "change_driver": "No change — BRUID persistence is a Phase 2 strategic fix",
+      "is_synthetic": true,
+      "timestamp": "2026-05-22T00:00:00Z"
+    },
+    {
+      "dimension_id": "autosegment_coverage",
+      "dimension_name": "AutoSegment Coverage",
+      "raw_value": 0.68,
+      "raw_label": "68% of sessions now assigned to a named AutoSegment",
+      "normalised_score": 16,
+      "max_score": 20,
+      "status": "healthy",
+      "data_source": "marketing_mcp",
+      "client": "marketing-mcp-client",
+      "change_from_pre_fix": 10,
+      "change_driver": "3 manual segments created in Engagement + boost rules activated in Discovery",
+      "is_synthetic": true,
+      "timestamp": "2026-05-22T00:00:00Z"
+    },
+    {
+      "dimension_id": "signal_freshness",
+      "dimension_name": "Signal Freshness",
+      "raw_value": 0.58,
+      "raw_label": "58% — no change",
+      "normalised_score": 14,
+      "max_score": 20,
+      "status": "warning",
+      "data_source": "marketing_mcp",
+      "client": "marketing-mcp-client",
+      "change_from_pre_fix": 0,
+      "change_driver": "No change",
+      "is_synthetic": true,
+      "timestamp": "2026-05-22T00:00:00Z"
+    },
+    {
+      "dimension_id": "rule_conflicts",
+      "dimension_name": "Rule Conflicts",
+      "raw_value": 0.90,
+      "raw_label": "90% conflict-free — minor decrease from adding 3 new rules",
+      "normalised_score": 16,
+      "max_score": 20,
+      "status": "healthy",
+      "data_source": "discovery_api",
+      "client": "discovery-client",
+      "change_from_pre_fix": -2,
+      "change_driver": "3 new boost rules added — minor conflict increase from 5% → 10%",
+      "is_synthetic": true,
+      "timestamp": "2026-05-22T00:00:00Z"
+    },
+    {
+      "dimension_id": "ab_test_coverage",
+      "dimension_name": "A/B Test Coverage",
+      "raw_value": 0.14,
+      "raw_label": "14% — no change",
+      "normalised_score": 6,
+      "max_score": 20,
+      "status": "critical",
+      "data_source": "analytics_mcp",
+      "client": "analytics-mcp-client",
+      "change_from_pre_fix": 0,
+      "change_driver": "No change",
+      "is_synthetic": true,
+      "timestamp": "2026-05-22T00:00:00Z"
+    }
+  ],
+  "score_verification": {
+    "sum_check": "8+16+14+16+6 = 60 (spec states 70 — discrepancy flagged)",
+    "composite_score_arithmetic": 60,
+    "composite_score_spec": 70,
+    "resolution_needed": "Confirm which dimension scores should change to reach 70. Options: AutoSegment 16→18 + A/B 6→8 + one more, or similar combination."
+  }
+}

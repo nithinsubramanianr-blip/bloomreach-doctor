@@ -1,0 +1,70 @@
+{
+  "_meta": {
+    "description": "Fix catalogue for the PPD fix list generator. Rank 1 = AutoSegment. Used by fix-generator.js — sorted by score ascending, mapped by revenue impact descending.",
+    "generated_at": "2026-05-22T00:00:00Z"
+  },
+  "fixes": [
+    {
+      "rank": 1,
+      "fix_id": "fix_autosegment",
+      "dimension_linked": "autosegment_coverage",
+      "fix_title": "Create 3 manual audience segments",
+      "plain_english_description": "Three key customer groups — Gifting Intent, High Value Returning, and New Prospecting — are not yet defined as segments in Bloomreach Engagement. Without segments, Loomi cannot apply any personalised ranking rules. Creating these three segments is the single highest-impact action available.",
+      "effort_level": "Low",
+      "estimated_revenue_impact": "12–18% RPV lift on targeted visitors",
+      "estimated_rpv_lift_pct_min": 12,
+      "estimated_rpv_lift_pct_max": 18,
+      "action_label": "Create Segments",
+      "risk_level": "low",
+      "steps": [
+        "In Bloomreach Engagement, navigate to Segments",
+        "Create segment: Gifting Intent (4+ gift category page views OR gift product clicks in last 30 days)",
+        "Create segment: High Value Returning (2+ purchases AND AOV > £150)",
+        "Create segment: New Prospecting (0 purchases AND session_count = 1)",
+        "Link each segment to corresponding Discovery boost rule"
+      ],
+      "impact_assumption": "Based on Bloomreach benchmark data: moving from 14% → 68% AutoSegment coverage with active rules typically drives 12–18% RPV on targeted visitor cohort."
+    },
+    {
+      "rank": 2,
+      "fix_id": "fix_bruid",
+      "dimension_linked": "bruid_match_rate",
+      "fix_title": "Enable BRUID persistence for guest sessions",
+      "plain_english_description": "Only 22% of site sessions are recognised by Bloomreach's BRUID cookie. The primary cause is that most visitors are not logged in when they arrive — they log in at checkout. Until BRUID persistence is implemented for anonymous sessions, Loomi cannot personalise for 78% of traffic.",
+      "effort_level": "Medium",
+      "estimated_revenue_impact": "8–15% RPV lift on returning visitors",
+      "estimated_rpv_lift_pct_min": 8,
+      "estimated_rpv_lift_pct_max": 15,
+      "action_label": "Enable BRUID",
+      "risk_level": "medium",
+      "steps": [
+        "Verify _br_uid_2 cookie lifetime is set to 365 days in Discovery configuration",
+        "Confirm cookie is not blocked by consent management platform for returning visitors",
+        "Test BRUID persistence across sessions in staging environment",
+        "Monitor BRUID match rate in Discovery analytics weekly"
+      ],
+      "impact_assumption": "Based on Bloomreach benchmarks: 1 percentage point improvement in BRUID match rate ≈ 0.5–0.8% RPV lift. Moving from 22% → 70% match rate = ~24–38% improvement = estimated 8–15% RPV on returning visitor cohort."
+    },
+    {
+      "rank": 3,
+      "fix_id": "fix_rules",
+      "dimension_linked": "ab_test_coverage",
+      "fix_title": "Configure segment-scoped boost rules",
+      "plain_english_description": "Three pre-configured boost rules exist in Discovery but are currently INACTIVE. Activating them will immediately surface the right products for each customer segment — gift products for Gifting Intent, premium and new arrivals for High Value Returning, and bestsellers for New Prospecting visitors.",
+      "effort_level": "Low",
+      "estimated_revenue_impact": "5–10% RPV lift on search queries",
+      "estimated_rpv_lift_pct_min": 5,
+      "estimated_rpv_lift_pct_max": 10,
+      "action_label": "Configure Rules",
+      "risk_level": "low",
+      "steps": [
+        "In Bloomreach Discovery merchandising UI, locate the three pre-created boost rules",
+        "Activate Rule 1: Gifting Intent — boost gift_eligible products",
+        "Activate Rule 2: High Value Returning — boost is_new_arrival and premium products",
+        "Activate Rule 3: New Prospecting — boost is_bestseller products",
+        "Monitor search result rankings for each persona in PLP"
+      ],
+      "impact_assumption": "Segment-scoped boost rules with confirmed segment coverage (post-fix 68%) typically drive 5–10% RPV improvement on affected search queries."
+    }
+  ]
+}
