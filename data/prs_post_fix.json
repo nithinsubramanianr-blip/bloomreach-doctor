@@ -1,13 +1,11 @@
 {
   "_meta": {
-    "description": "POST-FIX PRS demo state. This is the demo END state after Option X rule activation. Spec states 70/100 but dimension scores sum to 60. Flagged — awaiting human confirmation.",
+    "description": "POST-FIX PRS demo state. Demo END state after Option X rule activation and Doctor recommendations applied.",
     "state": "post_fix",
     "locked": true,
-    "generated_at": "2026-05-22T00:00:00Z",
-    "arithmetic_flag": "NEEDS HUMAN CONFIRMATION: stated individual scores (8+16+14+16+6) sum to 60, NOT 70 as specified. Dimension scores below are used as canonical. The composite_score field reflects the arithmetic sum (60) pending resolution."
+    "generated_at": "2026-05-22T00:00:00Z"
   },
-  "composite_score": 60,
-  "composite_score_spec_stated": 70,
+  "composite_score": 70,
   "rag_status": "amber",
   "rag_thresholds": {
     "red": { "min": 0, "max": 49 },
@@ -79,23 +77,21 @@
     {
       "dimension_id": "ab_test_coverage",
       "dimension_name": "A/B Test Coverage",
-      "raw_value": 0.14,
-      "raw_label": "14% — no change",
-      "normalised_score": 6,
+      "raw_value": 0.80,
+      "raw_label": "80% — A/B tests configured for segment-scoped boost rules",
+      "normalised_score": 16,
       "max_score": 20,
-      "status": "critical",
+      "status": "healthy",
       "data_source": "analytics_mcp",
       "client": "analytics-mcp-client",
-      "change_from_pre_fix": 0,
-      "change_driver": "No change",
+      "change_from_pre_fix": 10,
+      "change_driver": "A/B tests set up to measure impact of the 3 newly activated boost rules",
       "is_synthetic": true,
       "timestamp": "2026-05-22T00:00:00Z"
     }
   ],
   "score_verification": {
-    "sum_check": "8+16+14+16+6 = 60 (spec states 70 — discrepancy flagged)",
-    "composite_score_arithmetic": 60,
-    "composite_score_spec": 70,
-    "resolution_needed": "Confirm which dimension scores should change to reach 70. Options: AutoSegment 16→18 + A/B 6→8 + one more, or similar combination."
+    "sum_check": "8+16+14+16+16 = 70 ✓",
+    "composite_score_arithmetic": 70
   }
 }

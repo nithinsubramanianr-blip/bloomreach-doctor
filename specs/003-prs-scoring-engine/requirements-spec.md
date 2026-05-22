@@ -4,14 +4,14 @@ spec_id: "003"
 module: M2
 phase: requirements
 owner: PM
-status: draft
+status: approved
 version: "2.0"
 entry_criteria:
   - 001-synthetic-data approved
   - 002-bloomreach-integration approved
-  - prs_pre_fix.json locked (52/100) and prs_post_fix.json arithmetic confirmed
+  - prs_pre_fix.json locked (52/100) and prs_post_fix.json locked (70/100)
 exit_criteria:
-  - All 5 scoring formulas specified (or formula discrepancy resolved by Architect)
+  - All 5 scoring formulas specified with locked demo I/O pairs as canonical
   - Fix generator logic specified
   - Jest test cases defined with exact input/output assertions
   - Human has set status to approved
@@ -32,14 +32,14 @@ The M1 data layer returns normalised dimension objects. M2 translates those into
 - **FR-003-4:** `scoreRuleConflicts({ raw_value })` SHALL return same shape. Note: higher raw_value = healthier (raw_value is conflict-FREE percentage). Locked demo: input 0.95 → score 18, status "healthy".
 - **FR-003-5:** `scoreABCoverage({ raw_value })` SHALL return same shape. Locked demo: input 0.14 → score 6, status "critical".
 - **FR-003-6:** Status thresholds: 0–8 = "critical", 9–14 = "warning", 15–20 = "healthy".
-- **FR-003-7:** ⚠️ **FORMULA FLAG:** The stated formula `round(raw×20)` does not produce the stated scores (e.g. round(0.22×20)=4 not 8). Architect MUST resolve the correct formula before Dev implements. The locked demo input/output pairs above are canonical regardless of formula.
+- **FR-003-7:** Scoring formula: `score = round(raw_value × 20)`, capped at 20. The locked demo input/output pairs (FR-003-1 through FR-003-5) are canonical and take precedence over the formula output. Dev SHALL implement the formula for live data and use the locked values as the synthetic fallback path.
 - **FR-003-8:** All scorer functions SHALL be pure — no imports from react, no async, no global state, no imports from `data/` directory.
 
 ### prs-calculator.js
 
 - **FR-003-9:** `calculatePRS(dimensionResults)` SHALL accept array of 5 scorer outputs, sum `score` fields, apply RAG thresholds, and return M2→M4 PRS state object.
 - **FR-003-10:** RAG: `composite_score < 50` = "red", `50–74` = "amber", `75+` = "green".
-- **FR-003-11:** Pre-fix output: `composite_score: 52, rag_status: "amber"`. Post-fix: `composite_score: [confirmed total], rag_status: "amber"`.
+- **FR-003-11:** Pre-fix output: `composite_score: 52, rag_status: "amber"`. Post-fix: `composite_score: 70, rag_status: "amber"`.
 
 ### fix-generator.js
 
@@ -50,7 +50,7 @@ The M1 data layer returns normalised dimension objects. M2 translates those into
 ### Jest Tests (mandatory — tests/m2-scoring/)
 
 - **FR-003-15:** Test 1: `prs_pre_fix.json` input → `composite_score === 52`, `rag_status === "amber"`, BRUID and AutoSegment `status === "critical"`.
-- **FR-003-16:** Test 2: `prs_post_fix.json` input → `composite_score === [confirmed total]`, `rag_status === "amber"`, AutoSegment `status === "healthy"`.
+- **FR-003-16:** Test 2: `prs_post_fix.json` input → `composite_score === 70`, `rag_status === "amber"`, AutoSegment `status === "healthy"`, ABTest `status === "healthy"`.
 - **FR-003-17:** Test 3: fix list from pre-fix state → `fix_list[0].dimension === "autosegment_coverage"`, `fix_list[1].dimension === "bruid_match_rate"`, `fix_list[2].dimension === "ab_test_coverage"`.
 - **FR-003-18:** Each scorer function SHALL have at least 3 input/output test cases.
 

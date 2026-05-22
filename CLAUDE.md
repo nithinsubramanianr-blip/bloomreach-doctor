@@ -84,7 +84,8 @@ bloomreach-doctor/
     │   ├── marketing-mcp-client.js   (AutoSegment coverage, signal freshness)
     │   ├── analytics-mcp-client.js   (A/B test coverage, revenue baselines)
     │   ├── normaliser.js             (unifies all sources → common dimension schema)
-    │   └── rule-manager.js           (reads rule activation state from Discovery)
+    │   ├── rule-manager.js           (reads rule activation state from Discovery — read-only)
+    │   └── prs-data-fetcher.js       (consolidates 5 dimension fetchers → fetchAllDimensions())
     ├── m2-scoring/
     │   ├── dimension-scorers.js      (5 scorer functions in one file)
     │   ├── prs-calculator.js         (sums 5 sub-scores → composite PRS + RAG)
@@ -150,14 +151,12 @@ Full profiles in `/data/personas.json`.
 | AutoSegment Coverage | 0.68 | 16/20 | healthy | Segments created + rules active |
 | Signal Freshness | 0.58 | 14/20 | warning | No change |
 | Rule Conflicts | 0.90 | 16/20 | healthy | Minor — 3 new rules added |
-| A/B Test Coverage | 0.14 | 6/20 | critical | No change |
-| **TOTAL** | | **60/100** | **Amber** | |
-
-> **⚠️ ARITHMETIC FLAG:** The post-fix dimension scores (8+16+14+16+6) sum to **60**, not 70 as stated in the spec. The individual dimension scores are used as canonical. Architect must resolve: either some dimension scores are wrong, or the total is wrong. **Do not change dimension scores without human confirmation.**
+| A/B Test Coverage | 0.80 | 16/20 | healthy | A/B tests configured for boost rules |
+| **TOTAL** | | **70/100** | **Amber** | |
 
 Scoring formula: `score = round(raw_percentage × 20)`, capped at 20. Status: 0–8 = critical, 9–14 = warning, 15–20 = healthy.
 
-> **⚠️ FORMULA FLAG:** The stated formula `round(raw × 20)` does not produce the stated scores from the stated raw values (e.g. round(0.22 × 20) = 4, not 8). Architect must reconcile formula with locked scores before Dev implements scorers.
+> **Note for Architect:** The locked demo scores (e.g. BRUID = 8/20 from raw 0.22) take precedence over the formula output. The formula is the live implementation path; the locked scores are the demo fallback values baked into the synthetic data files.
 
 ---
 
@@ -167,7 +166,7 @@ Scoring formula: `score = round(raw_percentage × 20)`, capped at 20. Status: 0�
 |---|---|---|---|
 | 1 | Create 3 manual audience segments | AutoSegment Coverage | 12–18% |
 | 2 | Enable BRUID persistence for guest sessions | BRUID Match Rate | 8–15% |
-| 3 | Configure segment-scoped boost rules | Rule Conflicts | 5–10% |
+| 3 | Configure A/B tests for personalised search | A/B Test Coverage | 5–10% |
 
 Fix list from pre-fix state: rank 1 = AutoSegment, rank 2 = BRUID, rank 3 = A/B Coverage (sorted by score ascending, mapped to catalogue by revenue impact descending).
 
@@ -306,7 +305,7 @@ The approval modal records intent in **application state only**. No API write ca
 
 ```
 Test 1: prs_pre_fix.json → composite 52, rag_status "amber", BRUID and AutoSegment status "critical"
-Test 2: prs_post_fix.json → composite [locked value], rag_status "amber", AutoSegment status "healthy"
+Test 2: prs_post_fix.json → composite 70, rag_status "amber", AutoSegment status "healthy", ABTest status "healthy"
 Test 3: fix list from pre-fix → rank 1 = AutoSegment, rank 2 = BRUID, rank 3 = A/B Coverage
 ```
 
@@ -347,13 +346,13 @@ Wait for my approval before doing anything.
 
 | Spec | Module | Feature | Req | Arch | Design | Impl | Test |
 |---|---|---|---|---|---|---|---|
-| 001 | C5 | Synthetic Data Layer | draft | ⬜ | ⬜ | ⬜ | ⬜ |
-| 002 | M1 | Bloomreach Integration Layer | draft | ⬜ | ⬜ | ⬜ | ⬜ |
-| 003 | M2 | PRS Scoring Engine | draft | ⬜ | ⬜ | ⬜ | ⬜ |
-| 004 | M3 | Natural Language Interface | draft | ⬜ | ⬜ | ⬜ | ⬜ |
-| 005 | M4 | PPD Dashboard UI | draft | ⬜ | ⬜ | ⬜ | ⬜ |
-| 006 | M5 | Next.js PLP | draft | ⬜ | ⬜ | ⬜ | ⬜ |
-| 007 | — | Submission Artifacts | draft | ⬜ | ⬜ | ⬜ | ⬜ |
+| 001 | C5 | Synthetic Data Layer | **approved** | ⬜ | ⬜ | ⬜ | ⬜ |
+| 002 | M1 | Bloomreach Integration Layer | **approved** | ⬜ | ⬜ | ⬜ | ⬜ |
+| 003 | M2 | PRS Scoring Engine | **approved** | ⬜ | ⬜ | ⬜ | ⬜ |
+| 004 | M3 | Natural Language Interface | **approved** | ⬜ | ⬜ | ⬜ | ⬜ |
+| 005 | M4 | PPD Dashboard UI | **approved** | ⬜ | ⬜ | ⬜ | ⬜ |
+| 006 | M5 | Next.js PLP | **approved** | ⬜ | ⬜ | ⬜ | ⬜ |
+| 007 | — | Submission Artifacts | **approved** | ⬜ | ⬜ | ⬜ | ⬜ |
 
 Build dependency chain:
 - 001 (C5) → unblocks 002, 003, 004 in parallel
@@ -395,8 +394,6 @@ feature/m5-plp
 
 - Bloomreach sandbox credentials not yet received — all clients fall back to synthetic
 - Architecture, design, implementation, testing specs not yet written (awaiting requirements approval)
-- Post-fix total arithmetic discrepancy (8+16+14+16+6=60, spec says 70) — needs human confirmation
-- Scoring formula discrepancy — `round(raw×20)` does not produce stated scores — Architect must resolve
 - Old spec folders (001-readiness-dashboard, 002-shopper-simulator, 003-agent-diagnosis, 002-mcp-integration) are superseded
 
 ---

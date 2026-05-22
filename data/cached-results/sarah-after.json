@@ -1,0 +1,18 @@
+{
+  "_meta": {
+    "persona_id": "sarah",
+    "state": "after",
+    "description": "Sarah (Gifting) persona — boost rules ACTIVE. Rule 1 active: gift_eligible=true products boosted for Gifting Intent segment.",
+    "cache_key": "sarah-after",
+    "ttl_seconds": 300,
+    "source": "placeholder — populate with live Discovery results after Option X rule activation",
+    "query": "necklace",
+    "bruid": "_br_uid_2=sarah-gifting-demo-001",
+    "boost_rules_active": true,
+    "active_rules": ["rule_1_gifting_intent"],
+    "generated_at": "2026-05-22T00:00:00Z"
+  },
+  "query": "necklace",
+  "total": 50,
+  "products": []
+}

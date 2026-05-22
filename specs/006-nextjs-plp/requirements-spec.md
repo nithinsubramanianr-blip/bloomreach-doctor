@@ -4,7 +4,7 @@ spec_id: "006"
 module: M5
 phase: requirements
 owner: PM
-status: draft
+status: approved
 version: "1.0"
 entry_criteria:
   - 001-synthetic-data approved

@@ -1,0 +1,62 @@
+{
+  "_meta": {
+    "description": "Three Bloomreach Engagement segment definitions. Each segment is manually created in Engagement and linked to a Discovery boost rule. All segments are pre-seeded for the demo.",
+    "created_at": "2026-05-22T00:00:00Z"
+  },
+  "segments": [
+    {
+      "segment_id": "seg_new_prospecting",
+      "segment_name": "New Prospecting",
+      "display_name": "New Prospecting",
+      "persona_linked": "guest",
+      "engagement_segment_type": "manual",
+      "definition": "Sessions with 0 prior purchases, no BRUID cookie, and no segment assignment",
+      "signal_sources": ["session_count", "purchase_count", "bruid_present"],
+      "entry_criteria": {
+        "purchase_count": { "operator": "eq", "value": 0 },
+        "bruid_present": { "operator": "eq", "value": false }
+      },
+      "linked_boost_rule": "rule_3_new_prospecting",
+      "boost_condition": "is_bestseller = true",
+      "discovery_audience_id": "audience_new_prospecting",
+      "is_active": true,
+      "member_count_synthetic": 5800
+    },
+    {
+      "segment_id": "seg_gifting_intent",
+      "segment_name": "Gifting Intent",
+      "display_name": "Gifting Intent",
+      "persona_linked": "sarah",
+      "engagement_segment_type": "manual",
+      "definition": "Sessions showing gifting signals: viewed gift-wrap pages, browsed gift sets, or arrived via gifting campaign",
+      "signal_sources": ["page_views", "product_clicks", "campaign_source"],
+      "entry_criteria": {
+        "gift_category_views": { "operator": "gte", "value": 2 }
+      },
+      "linked_boost_rule": "rule_1_gifting_intent",
+      "boost_condition": "gift_eligible = true",
+      "discovery_audience_id": "audience_gifting_intent",
+      "is_active": true,
+      "member_count_synthetic": 2400
+    },
+    {
+      "segment_id": "seg_high_value_returning",
+      "segment_name": "High Value Returning",
+      "display_name": "High Value Returning",
+      "persona_linked": "alex",
+      "engagement_segment_type": "manual",
+      "definition": "Customers with 2+ prior purchases and AOV > £150, identified by BRUID cookie match",
+      "signal_sources": ["purchase_count", "aov", "bruid_present"],
+      "entry_criteria": {
+        "purchase_count": { "operator": "gte", "value": 2 },
+        "aov": { "operator": "gte", "value": 150 },
+        "bruid_present": { "operator": "eq", "value": true }
+      },
+      "linked_boost_rule": "rule_2_high_value_returning",
+      "boost_condition": "is_new_arrival = true OR price_band = premium",
+      "discovery_audience_id": "audience_high_value_returning",
+      "is_active": true,
+      "member_count_synthetic": 1200
+    }
+  ]
+}

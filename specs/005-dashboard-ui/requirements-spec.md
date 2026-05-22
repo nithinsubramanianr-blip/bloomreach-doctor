@@ -4,7 +4,7 @@ spec_id: "005"
 module: M4
 phase: requirements
 owner: PM
-status: draft
+status: approved
 version: "2.0"
 entry_criteria:
   - 003-prs-scoring-engine approved

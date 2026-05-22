@@ -4,14 +4,14 @@ spec_id: "001"
 component: C5
 phase: requirements
 owner: PM
-status: draft
+status: approved
 version: "2.0"
 entry_criteria:
   - CLAUDE.md is complete with correct architecture, personas, and PRS states
 exit_criteria:
   - All data files exist with correct shapes
   - Three personas in personas.json
-  - prs_pre_fix.json sums to 52, prs_post_fix.json arithmetic confirmed
+  - prs_pre_fix.json sums to 52, prs_post_fix.json sums to 70
   - fix_catalogue.json has AutoSegment as rank 1
   - 50 products in GBP with no KS IP
   - Human has set status to approved
@@ -35,11 +35,11 @@ All four build modules (M1–M4) plus M5 need deterministic test data that mirro
 - **FR-001-6:** Each dimension object SHALL include all M1→M2 contract fields: `dimension_id`, `raw_value`, `normalised_score`, `status`, `data_source`, `timestamp`, `is_synthetic`.
 
 ### prs_post_fix.json
-- **FR-001-7:** SHALL contain five dimension objects. Scores per spec: BRUID=8, AutoSegment=16, SignalFreshness=14, RuleConflicts=16, ABTest=6. `boost_rules_state` SHALL be "all_active".
-- **FR-001-8:** ⚠️ **OPEN ITEM:** Dimension scores sum to 60, spec states 70. Architect must confirm correct post-fix total before this spec can be fully approved.
+- **FR-001-7:** SHALL contain five dimension objects. Scores: BRUID=8, AutoSegment=16, SignalFreshness=14, RuleConflicts=16, ABTest=16. Sum=70. `boost_rules_state` SHALL be "all_active".
+- **FR-001-8:** `composite_score` SHALL be 70. `rag_status` SHALL be "amber". ABTest improvement reflects A/B tests configured for the 3 newly activated boost rules.
 
 ### fix_catalogue.json
-- **FR-001-9:** SHALL contain exactly 3 fix objects. Rank 1 = AutoSegment (12–18% RPV), Rank 2 = BRUID (8–15% RPV), Rank 3 = Rule Conflicts (5–10% RPV).
+- **FR-001-9:** SHALL contain exactly 3 fix objects. Rank 1 = AutoSegment (12–18% RPV), Rank 2 = BRUID (8–15% RPV), Rank 3 = A/B Test Coverage (5–10% RPV).
 - **FR-001-10:** Each fix SHALL include: `fix_id`, `dimension_linked`, `fix_title`, `plain_english_description`, `effort_level`, `estimated_revenue_impact`, `action_label`, `risk_level`, `steps`.
 
 ### products.json / products.csv

@@ -4,7 +4,7 @@ spec_id: "004"
 module: M3
 phase: requirements
 owner: PM
-status: draft
+status: approved
 version: "2.0"
 entry_criteria:
   - 001, 002, 003 requirements-spec.md approved

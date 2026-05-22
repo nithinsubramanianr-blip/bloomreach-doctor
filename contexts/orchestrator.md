@@ -8,13 +8,13 @@ PIPELINE STATUS — [date]
 
 Spec | Component | Feature                        | Req  | Arch | Design | Impl | Test | Next action
 -----|-----------|-------------------------------|------|------|--------|------|------|------------------
-001  | C5        | Synthetic Data Layer           | ⬜   | ⬜   | ⬜     | ⬜   | ⬜   | Req needs approval
-002  | M1        | Bloomreach Integration Layer   | ⬜   | ⬜   | ⬜     | ⬜   | ⬜   | Blocked by 001
-003  | M2        | PRS Scoring Engine             | ⬜   | ⬜   | ⬜     | ⬜   | ⬜   | Blocked by 001+002
-004  | M3        | Natural Language Interface     | ⬜   | ⬜   | ⬜     | ⬜   | ⬜   | Blocked by 001+002
-005  | M4        | PPD Dashboard UI               | ⬜   | ⬜   | ⬜     | ⬜   | ⬜   | Blocked by 003+004
-006  | M5        | Next.js PLP                    | ⬜   | ⬜   | ⬜     | ⬜   | ⬜   | Blocked by 001+002
-007  | —         | Submission Artifacts           | ⬜   | ⬜   | ⬜     | ⬜   | ⬜   | Blocked by 002+005 stable
+001  | C5        | Synthetic Data Layer           | ✅   | ⬜   | ⬜     | ⬜   | ⬜   | Req approved → Arch gate
+002  | M1        | Bloomreach Integration Layer   | ✅   | ⬜   | ⬜     | ⬜   | ⬜   | Req approved → Arch gate
+003  | M2        | PRS Scoring Engine             | ✅   | ⬜   | ⬜     | ⬜   | ⬜   | Req approved → Arch gate
+004  | M3        | Natural Language Interface     | ✅   | ⬜   | ⬜     | ⬜   | ⬜   | Req approved → Arch gate
+005  | M4        | PPD Dashboard UI               | ✅   | ⬜   | ⬜     | ⬜   | ⬜   | Req approved → Arch gate
+006  | M5        | Next.js PLP                    | ✅   | ⬜   | ⬜     | ⬜   | ⬜   | Req approved → Arch gate
+007  | —         | Submission Artifacts           | ✅   | ⬜   | ⬜     | ⬜   | ⬜   | Req approved → awaits 002+005 stable
 ```
 
 ## Build Dependency Chain (enforce strictly)
@@ -71,9 +71,11 @@ Report: test results, CLAUDE.md changes.
 
 ## Open Issues — Flag Before Proceeding
 
-1. **Post-fix arithmetic:** 8+16+14+16+6 = 60, spec states 70. Human must confirm correct total before 003 Architect gate.
-2. **Scorer formula:** `round(raw×20)` does not produce stated scores from stated raw values. Architect must resolve before Dev implements.
-3. **Sandbox credentials:** Not yet received. All M1 clients fall back to synthetic until credentials arrive via #sandbox-support.
+1. **Sandbox credentials:** Not yet received. All M1 clients fall back to synthetic until credentials arrive via #sandbox-support.
+
+Resolved (no longer blocking):
+- ~~Post-fix arithmetic: confirmed 70/100. ABTest improves 6→16 (A/B tests configured for boost rules). 8+16+14+16+16=70 ✓~~
+- ~~Scorer formula: locked demo I/O pairs are canonical. Formula `round(raw×20)` applies to live data; synthetic path uses locked values.~~
 
 ## Critical Watch Items
 

@@ -4,7 +4,7 @@ spec_id: "002"
 module: M1
 phase: requirements
 owner: PM
-status: draft
+status: approved
 version: "2.0"
 entry_criteria:
   - 001-synthetic-data requirements-spec.md is approved

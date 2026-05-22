@@ -1,0 +1,18 @@
+{
+  "_meta": {
+    "persona_id": "guest",
+    "state": "after",
+    "description": "Guest persona — boost rules ACTIVE. Rule 3 active: is_bestseller=true products boosted for New Prospecting segment.",
+    "cache_key": "guest-after",
+    "ttl_seconds": 300,
+    "source": "placeholder — populate with live Discovery results after Option X rule activation",
+    "query": "necklace",
+    "bruid": null,
+    "boost_rules_active": true,
+    "active_rules": ["rule_3_new_prospecting"],
+    "generated_at": "2026-05-22T00:00:00Z"
+  },
+  "query": "necklace",
+  "total": 50,
+  "products": []
+}

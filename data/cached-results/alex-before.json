@@ -1,0 +1,17 @@
+{
+  "_meta": {
+    "persona_id": "alex",
+    "state": "before",
+    "description": "Alex (High Value Returning) persona — boost rules INACTIVE. Generic ranking for BRUID-matched session, no segment boost applied.",
+    "cache_key": "alex-before",
+    "ttl_seconds": 300,
+    "source": "placeholder — populate with live Discovery results before demo",
+    "query": "necklace",
+    "bruid": "_br_uid_2=alex-highvalue-demo-002",
+    "boost_rules_active": false,
+    "generated_at": "2026-05-22T00:00:00Z"
+  },
+  "query": "necklace",
+  "total": 50,
+  "products": []
+}

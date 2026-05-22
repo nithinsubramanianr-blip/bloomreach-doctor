@@ -1,0 +1,17 @@
+{
+  "_meta": {
+    "persona_id": "guest",
+    "state": "before",
+    "description": "Guest persona — boost rules INACTIVE. Generic ranking, no personalisation. Bestsellers surface naturally.",
+    "cache_key": "guest-before",
+    "ttl_seconds": 300,
+    "source": "placeholder — populate with live Discovery results before demo",
+    "query": "necklace",
+    "bruid": null,
+    "boost_rules_active": false,
+    "generated_at": "2026-05-22T00:00:00Z"
+  },
+  "query": "necklace",
+  "total": 50,
+  "products": []
+}
