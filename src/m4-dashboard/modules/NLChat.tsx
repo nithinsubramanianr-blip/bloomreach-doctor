@@ -96,11 +96,11 @@ export function NLChat() {
 
   return (
     <div className="animate-rise space-y-6">
-      <section className="shadow-panel rounded-2xl border border-border bg-surface p-6">
-        <h2 className="font-display text-2xl font-medium text-text">
+      <section className="shadow-panel rounded-2xl border border-border bg-surface p-4 md:p-6">
+        <h2 className="text-xl font-medium text-text md:text-2xl">
           Ask the doctor
         </h2>
-        <p className="mt-1 max-w-2xl text-[14px] text-muted">
+        <p className="mt-1 max-w-2xl text-[13px] text-muted md:text-[14px]">
           Plain-English guidance grounded in your Bloomreach signals. Every
           answer shows which data sources were consulted.
         </p>
@@ -112,7 +112,7 @@ export function NLChat() {
               type="button"
               onClick={() => ask(chip)}
               disabled={isLoading}
-              className="rounded-full border border-border bg-surface-2 px-3.5 py-2 text-left text-[13px] text-text-body transition-colors hover:border-accent/40 hover:bg-accent-soft disabled:opacity-50"
+              className="rounded-full border border-border bg-surface-2 px-3.5 py-2 text-left text-[13px] text-text-body transition-colors hover:border-accent/40 hover:bg-accent-soft disabled:opacity-50 max-md:w-full max-md:rounded-xl max-md:text-[12px]"
             >
               {chip}
             </button>
@@ -120,7 +120,7 @@ export function NLChat() {
         </div>
 
         <form
-          className="mt-5 flex gap-2"
+          className="mt-5 flex gap-2 max-md:flex-col"
           onSubmit={(e) => {
             e.preventDefault();
             ask(input);
@@ -135,7 +135,7 @@ export function NLChat() {
           <button
             type="submit"
             disabled={isLoading}
-            className="rounded-xl bg-accent px-6 py-3 text-sm font-semibold text-accent-ink transition-all hover:brightness-105 disabled:opacity-50"
+            className="rounded-xl bg-accent px-6 py-3 text-sm font-semibold text-accent-ink transition-all hover:brightness-105 disabled:opacity-50 max-md:w-full"
           >
             Ask
           </button>
@@ -188,14 +188,14 @@ function ExchangeView({ exchange }: { exchange: AgentResponse }) {
 
   return (
     <article className="shadow-panel overflow-hidden rounded-2xl border border-border bg-surface">
-      <div className="border-b border-border bg-surface-2/50 px-6 py-4">
+      <div className="border-b border-border bg-surface-2/50 px-4 py-3 md:px-6 md:py-4">
         <p className="text-[13px] font-medium text-muted">Your question</p>
-        <p className="mt-1 font-display text-lg text-text">{exchange.query}</p>
+        <p className="mt-1 text-lg text-text">{exchange.query}</p>
       </div>
 
-      <div className="space-y-5 px-6 py-5">
-        <div className="rounded-xl border border-accent/20 bg-accent-soft/50 p-5">
-          <p className="font-display text-[17px] font-medium leading-snug text-text">
+      <div className="space-y-5 px-4 py-5 md:px-6">
+        <div className="rounded-xl border border-accent/20 bg-accent-soft/50 p-4 md:p-5">
+          <p className="text-[17px] font-medium leading-snug text-text">
             {answer.summary_sentence}
           </p>
           <p className="mt-3 text-[14px] leading-relaxed text-muted">
@@ -225,7 +225,7 @@ function ExchangeView({ exchange }: { exchange: AgentResponse }) {
           </ol>
         </div>
 
-        <div className="rounded-xl border border-border bg-surface-2/30 p-5">
+        <div className="rounded-xl border border-border bg-surface-2/30 p-4 md:p-5">
           <h3 className="text-[14px] font-semibold text-text">
             Data sources consulted
           </h3>
@@ -237,7 +237,7 @@ function ExchangeView({ exchange }: { exchange: AgentResponse }) {
             {exchange.reasoning_trace.map((step, i) => (
               <li
                 key={i}
-                className="grid gap-1 rounded-lg border border-border/70 bg-surface px-4 py-3 sm:grid-cols-[160px_1fr]"
+                className="rounded-lg border border-border/70 bg-surface px-4 py-3 md:grid md:grid-cols-[160px_1fr] md:gap-1"
               >
                 <div>
                   <p className="text-[13px] font-medium text-text">
@@ -255,7 +255,7 @@ function ExchangeView({ exchange }: { exchange: AgentResponse }) {
           </ul>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4 max-md:flex-col max-md:items-start">
           <p className="text-[14px] text-text-body">
             <span className="font-semibold text-accent">Next step: </span>
             {answer.suggested_next_action}

@@ -51,7 +51,7 @@ export function ScoreDial({ score, ragStatus, size = 176 }: ScoreDialProps) {
       </svg>
       <div className="absolute flex flex-col items-center">
         <span
-          className="font-display text-[42px] font-semibold leading-none"
+          className="font-sans text-[42px] font-semibold leading-none"
           style={{ color: colour }}
         >
           {clamped}

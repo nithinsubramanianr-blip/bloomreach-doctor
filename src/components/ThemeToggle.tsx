@@ -2,6 +2,7 @@
 
 interface ThemeToggleProps {
   variant?: "default" | "header";
+  className?: string;
 }
 
 function SunIcon() {
@@ -48,7 +49,10 @@ function MoonIcon() {
   );
 }
 
-export function ThemeToggle({ variant = "default" }: ThemeToggleProps) {
+export function ThemeToggle({
+  variant = "default",
+  className = "",
+}: ThemeToggleProps) {
   function toggle() {
     const root = document.documentElement;
     const next = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
@@ -70,7 +74,7 @@ export function ThemeToggle({ variant = "default" }: ThemeToggleProps) {
       type="button"
       onClick={toggle}
       aria-label="Toggle colour theme"
-      className={`theme-toggle flex h-9 w-9 items-center justify-center rounded-full border transition-colors ${styles}`}
+      className={`theme-toggle flex h-9 w-9 items-center justify-center rounded-full border transition-colors ${styles} ${className}`}
     >
       <span className="theme-toggle-moon">
         <MoonIcon />

@@ -67,16 +67,16 @@ export function PLPClient({ personas, initialProducts }: PLPClientProps) {
   return (
     <div className="flex min-h-full flex-col bg-bg">
       <header className="sticky top-0 z-50 border-b border-navy/20 bg-header-bg text-header-text shadow-[0_4px_24px_-10px_rgba(0,0,0,0.35)]">
-        <div className="mx-auto flex w-full max-w-[1200px] flex-wrap items-center justify-between gap-4 px-6 py-4">
-          <div>
-            <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-header-muted">
+        <div className="mx-auto flex w-full max-w-[1200px] flex-wrap items-center justify-between gap-4 px-4 py-3 md:px-6 md:py-4">
+          <div className="min-w-0">
+            <p className="text-[10px] font-medium uppercase tracking-[0.1em] text-header-muted md:text-[11px] md:tracking-[0.12em]">
               Kendra Scott · Live PLP
             </p>
-            <h1 className="font-display text-[22px] font-medium text-header-text">
+            <h1 className="mt-0.5 text-lg font-semibold text-header-text md:text-[22px] md:font-medium">
               Necklace search
             </h1>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 md:gap-3">
             <PersonaSwitcher
               personas={personas}
               activePersonaId={activePersona}
@@ -84,9 +84,10 @@ export function PLPClient({ personas, initialProducts }: PLPClientProps) {
             />
             <Link
               href="/"
-              className="hidden rounded-full border border-white/15 px-3 py-1.5 text-[12px] text-header-muted transition-colors hover:border-white/30 hover:text-header-text sm:inline"
+              className="rounded-lg border border-white/15 px-2.5 py-2 text-[11px] text-header-muted transition-colors hover:border-white/30 hover:text-header-text md:rounded-full md:px-3 md:py-1.5 md:text-[12px]"
             >
-              Open Doctor
+              <span className="md:hidden">Doctor</span>
+              <span className="hidden md:inline">Open Doctor</span>
             </Link>
             <ThemeToggle variant="header" />
           </div>
@@ -94,17 +95,19 @@ export function PLPClient({ personas, initialProducts }: PLPClientProps) {
       </header>
 
       <div className="border-b border-border bg-surface">
-        <div className="mx-auto flex w-full max-w-[1200px] flex-wrap items-center justify-between gap-4 px-6 py-4">
+        <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-3 px-4 py-3 md:flex-row md:items-center md:justify-between md:gap-4 md:px-6 md:py-4">
           <BeforeAfterToggle value={displayState} onChange={handleState} />
           {stateBlurb && (
-            <p className="max-w-xl text-[13px] text-muted">{stateBlurb}</p>
+            <p className="max-w-xl text-[12px] text-muted md:text-[13px]">
+              {stateBlurb}
+            </p>
           )}
         </div>
       </div>
 
-      <main className="mx-auto w-full max-w-[1200px] flex-1 px-6 py-8">
+      <main className="mx-auto w-full max-w-[1200px] flex-1 px-4 py-5 md:px-6 md:py-8">
         <div
-          className={`grid grid-cols-2 gap-4 transition-opacity md:grid-cols-4 ${
+          className={`grid grid-cols-2 gap-3 transition-opacity md:grid-cols-4 md:gap-4 ${
             isLoading ? "opacity-60" : "opacity-100"
           }`}
         >
@@ -130,13 +133,13 @@ function BeforeAfterToggle({
   onChange: (state: DemoState) => void;
 }) {
   return (
-    <div className="inline-flex rounded-xl border border-border bg-surface-2 p-1">
+    <div className="inline-flex w-full max-w-xs rounded-xl border border-border bg-surface-2 p-1 md:w-auto">
       {(["before", "after"] as const).map((state) => (
         <button
           key={state}
           type="button"
           onClick={() => onChange(state)}
-          className={`rounded-lg px-4 py-2 text-[13px] font-medium capitalize transition-colors ${
+          className={`flex-1 rounded-lg px-3 py-2 text-[12px] font-medium capitalize transition-colors md:flex-none md:px-4 md:text-[13px] ${
             value === state
               ? state === "after"
                 ? "bg-accent text-accent-ink"

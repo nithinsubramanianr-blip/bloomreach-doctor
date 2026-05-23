@@ -32,8 +32,8 @@ function ProductImage({ product }: { product: DiscoveryProduct }) {
   const showImage = product.image_url && !errored;
 
   return (
-    <div className="relative flex h-32 items-center justify-center bg-tile text-accent">
-      <CategoryIcon category={product.category} className="h-11 w-11 opacity-80" />
+    <div className="relative flex h-32 items-center justify-center bg-tile text-accent max-md:h-28">
+      <CategoryIcon category={product.category} className="h-11 w-11 opacity-80 max-md:h-9 max-md:w-9" />
       {showImage && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -91,11 +91,11 @@ export function ProductCard({
       </div>
 
       <div className="px-3.5 pb-3.5 pt-3">
-        <h3 className="min-h-[34px] text-[13px] font-medium leading-snug text-text">
+        <h3 className="min-h-[34px] text-[13px] font-medium leading-snug text-text max-md:line-clamp-2 max-md:min-h-[2.5rem] max-md:text-[12px]">
           {product.name}
         </h3>
         <div className="mt-2.5 flex items-center justify-between gap-2">
-          <span className="font-display text-[15px] font-semibold text-text">
+          <span className="text-[15px] font-semibold text-text max-md:text-[14px]">
             £{product.price.toFixed(2)}
           </span>
           {product.affinity && (

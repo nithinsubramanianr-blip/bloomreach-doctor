@@ -23,10 +23,10 @@ interface ApprovedAction {
   status: "pending_team_review";
 }
 
-const TABS: { id: Tab; label: string }[] = [
-  { id: "scorecard", label: "Scorecard" },
-  { id: "simulator", label: "Shopper simulator" },
-  { id: "doctor", label: "Ask the doctor" },
+const TABS: { id: Tab; label: string; shortLabel: string }[] = [
+  { id: "scorecard", label: "Scorecard", shortLabel: "Score" },
+  { id: "simulator", label: "Shopper simulator", shortLabel: "Simulator" },
+  { id: "doctor", label: "Ask the doctor", shortLabel: "Doctor" },
 ];
 
 interface DashboardProps {
@@ -49,10 +49,12 @@ export function Dashboard({
   const [selectedFix, setSelectedFix] = useState<FixResult | null>(null);
   const [, setApprovedActions] = useState<ApprovedAction[]>([]);
 
-  async function activateRules() {
+  async function toggleBoostRules() {
+    const state =
+      prsState.boost_rules_state === "all_active" ? "before" : "after";
     setIsRefreshing(true);
     try {
-      const res = await fetch("/api/prs?state=after");
+      const res = await fetch(`/api/prs?state=${state}`);
       if (res.ok) {
         setPrsState((await res.json()) as PRSState);
       }
@@ -82,52 +84,67 @@ export function Dashboard({
   return (
     <div className="flex min-h-full flex-col bg-bg">
       <header className="sticky top-0 z-50 border-b border-navy/20 bg-header-bg text-header-text shadow-[0_4px_24px_-10px_rgba(0,0,0,0.35)]">
-        <div className="mx-auto flex w-full max-w-[1200px] flex-wrap items-center justify-between gap-4 px-6 py-4">
-          <div className="min-w-0">
-            <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-header-muted">
-              Kendra Scott · Bloomreach Discovery
-            </p>
-            <h1 className="font-display text-[22px] font-medium leading-tight text-header-text">
-              Personalization Performance Doctor
-            </h1>
+        <div className="mx-auto w-full max-w-[1200px] px-4 py-3 md:flex md:flex-wrap md:items-center md:justify-between md:gap-4 md:px-6 md:py-4">
+          <div className="flex items-start justify-between gap-3 md:min-w-0 md:flex-1">
+            <div className="min-w-0">
+              <p className="text-[10px] font-medium uppercase tracking-[0.1em] text-header-muted md:text-[11px] md:tracking-[0.12em]">
+                Kendra Scott · Bloomreach Discovery
+              </p>
+              <h1 className="mt-0.5 text-lg font-semibold leading-tight text-header-text md:text-[22px] md:font-medium">
+                Personalization Performance Doctor
+              </h1>
+            </div>
+            <div className="flex shrink-0 items-center gap-2 md:hidden">
+              <Link
+                href="/plp"
+                className="flex items-center rounded-lg border border-white/15 px-2.5 py-2 text-[11px] leading-none text-header-muted transition-colors hover:border-white/30 hover:text-header-text"
+              >
+                PLP
+              </Link>
+              <ThemeToggle variant="header" />
+            </div>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <nav
-              className="flex rounded-full border border-white/10 bg-white/5 p-1"
-              aria-label="Dashboard modules"
-            >
-              {TABS.map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`rounded-full px-4 py-1.5 text-[13px] font-medium transition-colors ${
-                    activeTab === tab.id
-                      ? "bg-accent text-accent-ink shadow-sm"
-                      : "text-header-muted hover:text-header-text"
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </nav>
-            <Link
-              href="/plp"
-              className="hidden rounded-full border border-white/15 px-3 py-1.5 text-[12px] text-header-muted transition-colors hover:border-white/30 hover:text-header-text sm:inline"
-            >
-              Live PLP
-            </Link>
-            <ThemeToggle variant="header" />
+
+          <div className="mt-3 w-full md:mt-0 md:w-auto md:shrink-0">
+            <div className="flex items-center gap-2">
+              <nav
+                className="flex w-full gap-1 rounded-xl border border-white/10 bg-white/5 p-1 md:w-auto md:rounded-full"
+                aria-label="Dashboard modules"
+              >
+                {TABS.map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`min-w-0 flex-1 rounded-lg px-1 py-2 text-center text-[11px] font-medium transition-colors md:flex-none md:shrink-0 md:rounded-full md:px-4 md:py-1.5 md:text-[13px] ${
+                      activeTab === tab.id
+                        ? "bg-accent text-accent-ink shadow-sm"
+                        : "text-header-muted hover:text-header-text"
+                    }`}
+                  >
+                    <span className="md:hidden">{tab.shortLabel}</span>
+                    <span className="hidden md:inline">{tab.label}</span>
+                  </button>
+                ))}
+              </nav>
+              <Link
+                href="/plp"
+                className="hidden shrink-0 items-center rounded-full border border-white/15 px-3 py-1.5 text-[12px] leading-none text-header-muted transition-colors hover:border-white/30 hover:text-header-text md:flex"
+              >
+                Live PLP
+              </Link>
+              <ThemeToggle variant="header" className="hidden md:flex" />
+            </div>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-[1200px] flex-1 px-6 py-8">
+      <main className="mx-auto w-full max-w-[1200px] flex-1 px-4 py-5 md:px-6 md:py-8">
         {activeTab === "scorecard" && (
           <PRSScorecard
             prsState={prsState}
             onReviewFix={reviewFix}
-            onActivateRules={activateRules}
+            onToggleBoostRules={toggleBoostRules}
             isRefreshing={isRefreshing}
           />
         )}

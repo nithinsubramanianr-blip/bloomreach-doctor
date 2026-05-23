@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import type {
   DemoState,
@@ -37,6 +37,16 @@ export function ShopperSimulator({
   const [before, setBefore] = useState<DiscoveryProduct[]>(initialBefore);
   const [after, setAfter] = useState<DiscoveryProduct[]>(initialAfter);
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const syncLayout = () => {
+      if (mq.matches) setLayoutMode("single");
+    };
+    syncLayout();
+    mq.addEventListener("change", syncLayout);
+    return () => mq.removeEventListener("change", syncLayout);
+  }, []);
 
   async function fetchState(persona: PersonaId, state: DemoState) {
     const cached = resultCache.get(persona, state);
@@ -82,18 +92,19 @@ export function ShopperSimulator({
 
   return (
     <div className="animate-rise shadow-panel overflow-hidden rounded-2xl border border-border bg-surface">
-      <div className="border-b border-border px-6 py-5">
-        <h2 className="font-display text-2xl font-medium text-text">
+      <div className="border-b border-border px-4 py-4 md:px-6 md:py-5">
+        <h2 className="text-xl font-medium text-text md:text-2xl">
           Shopper simulator
         </h2>
-        <p className="mt-1 text-[14px] text-muted">
+        <p className="mt-1 text-[13px] text-muted md:text-[14px]">
           Live Discovery results for{" "}
           <span className="font-medium text-accent">“necklace”</span> — compare
           generic vs personalised ranking by shopper type.
         </p>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border bg-surface-2/40 px-6 py-4">
+      {/* Desktop controls */}
+      <div className="hidden flex-wrap items-center justify-between gap-4 border-b border-border bg-surface-2/40 px-6 py-4 md:flex">
         <Segmented>
           {personas.map((p) => (
             <SegButton
@@ -108,7 +119,7 @@ export function ShopperSimulator({
 
         <div className="flex flex-wrap items-center gap-3">
           <Segmented>
-            <span className="caption cursor-default px-3 py-2 text-faint">
+            <span className="caption cursor-default px-3 py-2 pl-3.5 text-faint">
               Layout
             </span>
             <SegButton
@@ -128,7 +139,7 @@ export function ShopperSimulator({
 
           {layoutMode === "single" && (
             <Segmented>
-              <span className="caption cursor-default px-3 py-2 text-faint">
+              <span className="caption cursor-default px-3 py-2 pl-3.5 text-faint">
                 State
               </span>
               {(["before", "after"] as const).map((state) => (
@@ -146,9 +157,40 @@ export function ShopperSimulator({
         </div>
       </div>
 
+      {/* Mobile controls */}
+      <div className="space-y-3 border-b border-border bg-surface-2/40 px-4 py-3 md:hidden">
+        <MobileControlRow label="Shopper">
+          <Segmented>
+            {personas.map((p) => (
+              <SegButton
+                key={p.persona_id}
+                active={activePersona === p.persona_id}
+                onClick={() => selectPersona(p.persona_id)}
+              >
+                {p.display_name}
+              </SegButton>
+            ))}
+          </Segmented>
+        </MobileControlRow>
+        <MobileControlRow label="State">
+          <Segmented>
+            {(["before", "after"] as const).map((state) => (
+              <SegButton
+                key={state}
+                active={displayState === state}
+                accent={state === "after"}
+                onClick={() => setDisplayState(state)}
+              >
+                <span className="capitalize">{state}</span>
+              </SegButton>
+            ))}
+          </Segmented>
+        </MobileControlRow>
+      </div>
+
       {personaObj && <PersonaStrip persona={personaObj} />}
 
-      <div className="px-6 pt-4 text-[14px] text-muted">
+      <div className="px-4 pt-4 text-[13px] text-muted md:px-6 md:text-[14px]">
         <p>
           <span className="font-semibold text-text">Before</span>: generic
           ranking —{" "}
@@ -156,7 +198,7 @@ export function ShopperSimulator({
           results following Doctor recommendations.
         </p>
         {personaObj && layoutMode === "single" && (
-          <p className="mt-1.5 text-[13px] text-faint">
+          <p className="mt-1.5 text-[12px] text-faint md:text-[13px]">
             {displayState === "before"
               ? personaObj.plp_before_state
               : personaObj.plp_after_state}
@@ -168,7 +210,7 @@ export function ShopperSimulator({
 
       {layoutMode === "compare" ? (
         <div
-          className={`grid gap-4 px-6 pb-2 pt-5 transition-opacity lg:grid-cols-2 ${
+          className={`grid gap-4 px-4 pb-2 pt-5 transition-opacity md:grid-cols-2 md:px-6 ${
             isLoading ? "opacity-60" : "opacity-100"
           }`}
         >
@@ -189,7 +231,7 @@ export function ShopperSimulator({
         </div>
       ) : (
         <div
-          className={`grid grid-cols-2 gap-4 px-6 pb-2 pt-5 transition-opacity md:grid-cols-4 ${
+          className={`grid grid-cols-2 gap-3 px-4 pb-2 pt-5 transition-opacity md:grid-cols-4 md:gap-4 md:px-6 ${
             isLoading ? "opacity-60" : "opacity-100"
           }`}
         >
@@ -212,7 +254,7 @@ export function ShopperSimulator({
         </div>
       )}
 
-      <div className="mx-6 flex flex-wrap justify-between gap-2 border-t border-border py-4 text-[12px] text-faint">
+      <div className="mx-4 flex flex-col gap-1 border-t border-border py-3 text-[11px] text-faint md:mx-6 md:flex-row md:flex-wrap md:justify-between md:gap-2 md:py-4 md:text-[12px]">
         <span>↑ moved up vs. Before</span>
         <span>
           {layoutMode === "compare" || displayState === "after"
@@ -220,6 +262,21 @@ export function ShopperSimulator({
             : "Boost rules inactive"}
         </span>
       </div>
+    </div>
+  );
+}
+
+function MobileControlRow({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <p className="caption mb-1.5 text-faint">{label}</p>
+      <div className="-mx-1 overflow-x-auto px-1 pb-0.5">{children}</div>
     </div>
   );
 }
@@ -249,7 +306,7 @@ function CompareColumn({
     >
       <div className="mb-4 flex items-baseline justify-between gap-2">
         <div>
-          <h3 className="font-display text-lg font-medium text-text">{title}</h3>
+          <h3 className="text-lg font-medium text-text">{title}</h3>
           <p className="text-[12px] text-muted">{subtitle}</p>
         </div>
         {highlight && (
@@ -258,7 +315,7 @@ function CompareColumn({
           </span>
         )}
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {products.map((product, i) => (
           <ProductCard
             key={product.product_id}
@@ -275,7 +332,7 @@ function CompareColumn({
 
 function Segmented({ children }: { children: React.ReactNode }) {
   return (
-    <div className="inline-flex items-center rounded-xl border border-border bg-surface p-1">
+    <div className="inline-flex w-max max-w-full items-center rounded-xl border border-border bg-surface p-1 md:rounded-[11px]">
       {children}
     </div>
   );
@@ -299,7 +356,7 @@ function SegButton({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-lg px-4 py-2 text-[13px] font-medium transition-colors ${
+      className={`whitespace-nowrap rounded-lg px-3 py-2 text-[12px] font-medium transition-colors md:px-4 md:py-[7px] md:text-[13px] ${
         active ? activeClass : "text-muted hover:text-text"
       }`}
     >
@@ -310,11 +367,11 @@ function SegButton({
 
 function PersonaStrip({ persona }: { persona: Persona }) {
   return (
-    <div className="mx-6 mt-4 flex items-center gap-4 rounded-xl border border-accent/20 bg-accent-soft/60 px-4 py-4">
-      <div className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-navy font-display text-lg font-semibold text-white">
+    <div className="mx-4 mt-4 flex items-center gap-4 rounded-xl border border-accent/20 bg-accent-soft/60 px-4 py-4 md:mx-6">
+      <div className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-navy text-lg font-semibold text-white">
         {persona.display_name.charAt(0)}
       </div>
-      <div>
+      <div className="min-w-0">
         <div className="text-[15px] font-semibold text-text">
           {persona.display_name}{" "}
           <span className="font-normal text-muted">

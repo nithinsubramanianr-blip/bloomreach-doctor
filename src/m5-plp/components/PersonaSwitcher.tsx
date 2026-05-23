@@ -35,13 +35,13 @@ export function PersonaSwitcher({
   }
 
   return (
-    <label className="flex items-center gap-2 text-[12px] text-header-muted">
+    <label className="flex min-w-0 flex-1 items-center gap-2 text-[12px] text-header-muted sm:flex-none">
       <span className="hidden sm:inline">Viewing as</span>
       <select
         aria-label="Persona"
         value={activePersonaId}
         onChange={handleChange}
-        className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-[13px] font-medium text-header-text focus:border-accent focus:outline-none"
+        className="min-w-0 max-w-full flex-1 truncate rounded-full border border-white/15 bg-white/5 px-2.5 py-1.5 text-[12px] font-medium text-header-text focus:border-accent focus:outline-none sm:max-w-none sm:flex-none sm:px-3 sm:text-[13px]"
       >
         {personas.map((p) => (
           <option key={p.persona_id} value={p.persona_id} className="text-text">

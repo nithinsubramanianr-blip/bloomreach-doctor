@@ -36,14 +36,14 @@ const STATUS_BAR: Record<DimensionStatus, string> = {
 interface PRSScorecardProps {
   prsState: PRSState;
   onReviewFix: (fix: FixResult) => void;
-  onActivateRules: () => void;
+  onToggleBoostRules: () => void;
   isRefreshing: boolean;
 }
 
 export function PRSScorecard({
   prsState,
   onReviewFix,
-  onActivateRules,
+  onToggleBoostRules,
   isRefreshing,
 }: PRSScorecardProps) {
   const rulesActive = prsState.boost_rules_state === "all_active";
@@ -51,7 +51,7 @@ export function PRSScorecard({
   return (
     <div className="space-y-6">
       <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
-        <section className="animate-rise shadow-panel flex flex-col items-center rounded-2xl border border-border bg-surface p-6">
+        <section className="animate-rise shadow-panel mx-auto flex w-full max-w-[320px] flex-col items-center rounded-2xl border border-border bg-surface p-4 md:p-6 lg:mx-0">
           <p className="caption self-start text-muted">Readiness score</p>
           <div className="my-2">
             <ScoreDial
@@ -68,28 +68,32 @@ export function PRSScorecard({
           </p>
           <button
             type="button"
-            onClick={onActivateRules}
-            disabled={rulesActive || isRefreshing}
-            className="mt-5 w-full rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-accent-ink transition-all hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+            onClick={onToggleBoostRules}
+            disabled={isRefreshing}
+            className={`mt-5 w-full rounded-xl px-4 py-3 text-sm font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-50 ${
+              rulesActive
+                ? "border border-border bg-surface-2 text-text hover:border-border-strong"
+                : "bg-accent text-accent-ink hover:brightness-105"
+            }`}
           >
-            {rulesActive
-              ? "Boost rules active"
-              : isRefreshing
-                ? "Activating…"
+            {isRefreshing
+              ? rulesActive
+                ? "Deactivating…"
+                : "Activating…"
+              : rulesActive
+                ? "Deactivate boost rules"
                 : "Activate boost rules"}
           </button>
           <p className="mt-3 text-center text-[12px] leading-relaxed text-muted">
             {rulesActive
-              ? "Score reflects the post-fix personalised state."
+              ? "Post-fix state — click deactivate to return to the pre-fix demo."
               : "Simulates activating the three Discovery boost rules during the demo."}
           </p>
         </section>
 
-        <section className="animate-rise shadow-panel rounded-2xl border border-border bg-surface p-6">
+        <section className="animate-rise shadow-panel rounded-2xl border border-border bg-surface p-4 md:p-6">
           <div className="mb-5 flex items-baseline justify-between gap-3">
-            <h2 className="font-display text-xl font-medium text-text">
-              Five dimensions
-            </h2>
+            <h2 className="text-xl font-semibold text-text">Five dimensions</h2>
             <span className="text-[12px] text-faint">Each scored 0–20</span>
           </div>
           <ul className="divide-y divide-border">
@@ -100,17 +104,15 @@ export function PRSScorecard({
         </section>
       </div>
 
-      <section className="animate-rise shadow-panel rounded-2xl border border-border bg-surface p-6">
+      <section className="animate-rise shadow-panel rounded-2xl border border-border bg-surface p-4 md:p-6">
         <div className="mb-5">
-          <h2 className="font-display text-xl font-medium text-text">
-            Recommended fixes
-          </h2>
+          <h2 className="text-xl font-semibold text-text">Recommended fixes</h2>
           <p className="mt-1 text-[13px] text-muted">
             Ranked by estimated revenue impact — review before your team activates
             changes.
           </p>
         </div>
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid auto-rows-fr gap-4 md:grid-cols-3">
           {prsState.fix_list.map((fix) => (
             <FixCard key={fix.fix_id} fix={fix} onReview={onReviewFix} />
           ))}
@@ -132,7 +134,7 @@ function DimensionRow({ dimension }: { dimension: ScoredDimension }) {
         improved ? "improve-pulse rounded-lg px-2 -mx-2" : ""
       }`}
     >
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-start justify-between gap-3 max-md:flex-col max-md:gap-2">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <span
@@ -152,13 +154,13 @@ function DimensionRow({ dimension }: { dimension: ScoredDimension }) {
             {Math.round(dimension.raw_value * 100)}% raw
           </p>
         </div>
-        <div className="flex shrink-0 items-center gap-3">
+        <div className="flex shrink-0 items-center gap-3 max-md:w-full max-md:justify-between max-md:pl-4">
           <span
             className={`text-[12px] font-semibold capitalize ${STATUS_TEXT[dimension.status]}`}
           >
             {dimension.status}
           </span>
-          <span className="font-display text-lg font-semibold text-text">
+          <span className="text-lg font-semibold text-text">
             {dimension.score}
             <span className="text-[13px] font-normal text-faint">/20</span>
           </span>
@@ -182,25 +184,27 @@ function FixCard({
   onReview: (fix: FixResult) => void;
 }) {
   return (
-    <article className="flex flex-col rounded-xl border border-border bg-surface-2/60 p-5 transition-colors hover:border-accent/30">
+    <article className="flex h-full flex-col rounded-xl border border-border bg-surface-2/60 p-5 transition-colors hover:border-accent/30">
       <div className="flex items-center gap-2.5">
-        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-navy font-display text-sm font-semibold text-white">
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-navy text-sm font-semibold text-white">
           {fix.position}
         </span>
         <span className="caption text-muted">
           {fix.dimension.replace(/_/g, " ")}
         </span>
       </div>
-      <h3 className="mt-3 text-[15px] font-semibold leading-snug text-text">
-        {fix.fix_title}
-      </h3>
-      <p className="mt-2 text-[13px] font-medium text-accent">
-        {fix.revenue_impact}
-      </p>
+      <div className="mt-3 flex flex-1 flex-col">
+        <h3 className="line-clamp-2 min-h-[2.75rem] text-[15px] font-semibold leading-snug text-text">
+          {fix.fix_title}
+        </h3>
+        <p className="mt-2 line-clamp-2 min-h-[2.5rem] text-[13px] font-medium text-accent">
+          {fix.revenue_impact}
+        </p>
+      </div>
       <button
         type="button"
         onClick={() => onReview(fix)}
-        className="mt-4 w-full rounded-lg border border-accent/40 bg-surface px-3 py-2 text-sm font-medium text-accent transition-colors hover:bg-accent hover:text-accent-ink"
+        className="mt-4 h-10 w-full shrink-0 rounded-lg border border-accent/40 bg-surface px-3 text-sm font-medium text-accent transition-colors hover:bg-accent hover:text-accent-ink"
       >
         Review fix
       </button>

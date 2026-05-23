@@ -80,7 +80,7 @@ export function ApprovalModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="approval-title"
-        className="w-full max-w-lg rounded-2xl border border-border bg-surface p-6 shadow-panel"
+        className="w-full max-w-lg rounded-2xl border border-border bg-surface p-6 shadow-panel max-md:p-4"
       >
         {confirmed ? (
           <div className="flex flex-col items-center gap-4 py-6 text-center">
@@ -89,7 +89,7 @@ export function ApprovalModal({
             </div>
             <h2
               id="approval-title"
-              className="font-display text-xl font-medium text-text"
+              className="font-sans text-xl font-medium text-text"
             >
               Action logged for review
             </h2>
@@ -110,7 +110,7 @@ export function ApprovalModal({
             <p className="caption text-muted">Review fix · no changes made</p>
             <h2
               id="approval-title"
-              className="mt-2 font-display text-[22px] font-medium text-text"
+              className="mt-2 font-sans text-[22px] font-medium text-text"
             >
               {fix.fix_title}
             </h2>
@@ -118,7 +118,7 @@ export function ApprovalModal({
               {fix.description}
             </p>
 
-            <dl className="mt-5 grid grid-cols-2 gap-3 text-sm">
+            <dl className="mt-5 grid grid-cols-2 gap-3 text-sm max-md:grid-cols-1 max-md:mt-4">
               <div className="rounded-xl border border-border bg-surface-2/60 p-3">
                 <dt className="caption">Estimated impact</dt>
                 <dd className="mt-1 font-medium text-text">
@@ -139,18 +139,18 @@ export function ApprovalModal({
               ))}
             </ol>
 
-            <div className="mt-6 flex items-center justify-end gap-3">
+            <div className="mt-6 flex items-center justify-end gap-3 max-md:mt-5 max-md:flex-col-reverse max-md:items-stretch">
               <button
                 type="button"
                 onClick={onDismiss}
-                className="text-sm text-faint hover:text-text"
+                className="py-2 text-sm text-faint hover:text-text max-md:text-center md:py-0"
               >
                 Dismiss
               </button>
               <button
                 type="button"
                 onClick={onReviewLater}
-                className="rounded-xl border border-border px-4 py-2 text-sm font-medium text-muted hover:border-border-strong hover:text-text"
+                className="rounded-xl border border-border px-4 py-2 text-sm font-medium text-muted hover:border-border-strong hover:text-text max-md:w-full"
               >
                 Review later
               </button>
@@ -161,7 +161,7 @@ export function ApprovalModal({
                   onApprove(fix);
                   setConfirmed(true);
                 }}
-                className="rounded-xl bg-accent px-5 py-2 text-sm font-medium text-accent-ink hover:brightness-105"
+                className="rounded-xl bg-accent px-5 py-2 text-sm font-medium text-accent-ink hover:brightness-105 max-md:w-full max-md:py-2.5"
               >
                 Approve
               </button>
