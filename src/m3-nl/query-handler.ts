@@ -8,9 +8,11 @@ import type {
   ReasoningTraceStep,
   ScoredDimension,
 } from "@/lib/contracts";
+import { serverEnv } from "@/lib/env";
 import { fetchAllDimensions } from "@/m1-bloomreach/prs-data-fetcher";
 import { generateFixList } from "@/m2-scoring/fix-generator";
 import { calculatePRS } from "@/m2-scoring/prs-calculator";
+import { explainWithClaude } from "./llm-explainer";
 
 /**
  * M3 entry point — the sole public API of the NL interface (FR-004-1).
@@ -134,6 +136,29 @@ export async function handleQuery(
   const prs = calculatePRS(dimensions);
   prs.fix_list = generateFixList(prs);
 
+  // Option A: when ANTHROPIC_API_KEY is present, delegate answer composition to
+  // Claude with native tool use. Any failure (incl. a malformed reply) falls
+  // through to the deterministic path below — the route never 500s.
+  if (serverEnv.anthropicApiKey()) {
+    try {
+      const { trace, llm_response } = await explainWithClaude(
+        queryText,
+        state,
+        prs
+      );
+      return {
+        query: queryText,
+        intent,
+        reasoning_trace: trace,
+        llm_response,
+        timestamp: new Date().toISOString(),
+      };
+    } catch (e) {
+      console.error("[m3] Claude path failed — falling back to deterministic:", e);
+    }
+  }
+
+  // Fallback: deterministic, data-driven composition (untouched).
   const selected = selectDimensions(intent, queryText, prs.dimensions);
   const reasoning_trace = selected.map(traceStep);
 
