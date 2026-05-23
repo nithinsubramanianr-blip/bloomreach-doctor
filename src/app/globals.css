@@ -1,0 +1,24 @@
+@import "tailwindcss";
+
+/*
+ * Personalization Performance Doctor — design palette (CLAUDE.md "Design Palette").
+ * Tailwind v4 reads these @theme tokens, exposing utilities like `bg-navy`,
+ * `text-teal`, `border-amber`, etc. The demo is light-mode only (no dark mode):
+ * the RAG palette depends on fixed colours.
+ */
+@theme {
+  --color-navy: #1b3a5c;
+  --color-teal: #0e7c7b;
+  --color-amber: #f59e0b;
+  --color-red: #dc2626;
+  --color-green: #16a34a;
+
+  --color-background: #ffffff;
+  --color-foreground: #1b3a5c;
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
