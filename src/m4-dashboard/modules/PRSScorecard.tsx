@@ -9,22 +9,22 @@ import type {
 } from "@/lib/contracts";
 import { ScoreDial } from "../components/ScoreDial";
 
-/**
- * Module A — PRS Scorecard. Dial + 5 dimension rows + 3 ranked fix cards.
- * The Option X control activates the boost rules (synthetic: flips the demo
- * state), driving the live 52 -> 70 refresh.
- */
-
 const SOURCE_LABEL: Record<DataSource, string> = {
-  discovery_api: "Discovery API",
-  marketing_mcp: "Marketing MCP",
-  analytics_mcp: "Analytics MCP",
+  discovery_api: "Discovery",
+  marketing_mcp: "Marketing",
+  analytics_mcp: "Analytics",
 };
 
-const STATUS_STYLES: Record<DimensionStatus, string> = {
-  critical: "bg-red/10 text-red",
-  warning: "bg-amber/10 text-amber",
-  healthy: "bg-green/10 text-green",
+const STATUS_DOT: Record<DimensionStatus, string> = {
+  critical: "bg-red",
+  warning: "bg-amber",
+  healthy: "bg-green",
+};
+
+const STATUS_TEXT: Record<DimensionStatus, string> = {
+  critical: "text-red",
+  warning: "text-amber",
+  healthy: "text-green",
 };
 
 const STATUS_BAR: Record<DimensionStatus, string> = {
@@ -49,53 +49,67 @@ export function PRSScorecard({
   const rulesActive = prsState.boost_rules_state === "all_active";
 
   return (
-    <div className="grid gap-6 lg:grid-cols-3">
-      {/* Score + Option X */}
-      <section className="flex flex-col items-center gap-4 rounded-xl border border-black/10 bg-white p-6">
-        <h2 className="self-start text-sm font-semibold uppercase tracking-wide text-gray-500">
-          Personalization Readiness Score
-        </h2>
-        <ScoreDial score={prsState.composite_score} ragStatus={prsState.rag_status} />
-        <p className="text-center text-xs text-gray-500">
-          Last refreshed{" "}
-          {new Date(prsState.generated_at).toLocaleString("en-GB")}
-        </p>
-        <button
-          type="button"
-          onClick={onActivateRules}
-          disabled={rulesActive || isRefreshing}
-          className="w-full rounded-lg bg-teal px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {rulesActive
-            ? "Boost rules active ✓"
-            : isRefreshing
-              ? "Activating…"
-              : "Activate boost rules (Option X)"}
-        </button>
-        <p className="text-center text-[11px] text-gray-400">
-          {rulesActive
-            ? "Rules active — score reflects post-fix state."
-            : "Simulates TA1 activating the 3 boost rules in Discovery."}
-        </p>
-      </section>
+    <div className="space-y-6">
+      <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
+        <section className="animate-rise shadow-panel flex flex-col items-center rounded-2xl border border-border bg-surface p-6">
+          <p className="caption self-start text-muted">Readiness score</p>
+          <div className="my-2">
+            <ScoreDial
+              score={prsState.composite_score}
+              ragStatus={prsState.rag_status}
+            />
+          </div>
+          <p className="text-center text-[12px] text-faint">
+            Updated{" "}
+            {new Date(prsState.generated_at).toLocaleString("en-GB", {
+              dateStyle: "short",
+              timeStyle: "short",
+            })}
+          </p>
+          <button
+            type="button"
+            onClick={onActivateRules}
+            disabled={rulesActive || isRefreshing}
+            className="mt-5 w-full rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-accent-ink transition-all hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {rulesActive
+              ? "Boost rules active"
+              : isRefreshing
+                ? "Activating…"
+                : "Activate boost rules"}
+          </button>
+          <p className="mt-3 text-center text-[12px] leading-relaxed text-muted">
+            {rulesActive
+              ? "Score reflects the post-fix personalised state."
+              : "Simulates activating the three Discovery boost rules during the demo."}
+          </p>
+        </section>
 
-      {/* Dimensions */}
-      <section className="rounded-xl border border-black/10 bg-white p-6 lg:col-span-2">
-        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-gray-500">
-          Five Dimensions
-        </h2>
-        <ul className="space-y-3">
-          {prsState.dimensions.map((d) => (
-            <DimensionRow key={d.dimension_id} dimension={d} />
-          ))}
-        </ul>
-      </section>
+        <section className="animate-rise shadow-panel rounded-2xl border border-border bg-surface p-6">
+          <div className="mb-5 flex items-baseline justify-between gap-3">
+            <h2 className="font-display text-xl font-medium text-text">
+              Five dimensions
+            </h2>
+            <span className="text-[12px] text-faint">Each scored 0–20</span>
+          </div>
+          <ul className="divide-y divide-border">
+            {prsState.dimensions.map((d) => (
+              <DimensionRow key={d.dimension_id} dimension={d} />
+            ))}
+          </ul>
+        </section>
+      </div>
 
-      {/* Top fixes */}
-      <section className="rounded-xl border border-black/10 bg-white p-6 lg:col-span-3">
-        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-gray-500">
-          Top Fixes
-        </h2>
+      <section className="animate-rise shadow-panel rounded-2xl border border-border bg-surface p-6">
+        <div className="mb-5">
+          <h2 className="font-display text-xl font-medium text-text">
+            Recommended fixes
+          </h2>
+          <p className="mt-1 text-[13px] text-muted">
+            Ranked by estimated revenue impact — review before your team activates
+            changes.
+          </p>
+        </div>
         <div className="grid gap-4 md:grid-cols-3">
           {prsState.fix_list.map((fix) => (
             <FixCard key={fix.fix_id} fix={fix} onReview={onReviewFix} />
@@ -108,28 +122,52 @@ export function PRSScorecard({
 
 function DimensionRow({ dimension }: { dimension: ScoredDimension }) {
   const pct = (dimension.score / dimension.max_score) * 100;
+  const improved =
+    typeof dimension.change_from_pre_fix === "number" &&
+    dimension.change_from_pre_fix > 0;
+
   return (
-    <li className="flex flex-col gap-1">
-      <div className="flex items-center justify-between gap-2">
-        <span className="font-medium text-navy">{dimension.dimension_name}</span>
-        <span className="flex items-center gap-2">
-          <span className="text-xs text-gray-400">
-            {SOURCE_LABEL[dimension.data_source]}
-          </span>
+    <li
+      className={`flex flex-col gap-2 py-3.5 first:pt-0 last:pb-0 ${
+        improved ? "improve-pulse rounded-lg px-2 -mx-2" : ""
+      }`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <span
+              className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${STATUS_DOT[dimension.status]}`}
+            />
+            <span className="text-[15px] font-medium text-text">
+              {dimension.dimension_name}
+            </span>
+            {improved && (
+              <span className="text-[11px] font-semibold text-green">
+                +{dimension.change_from_pre_fix}
+              </span>
+            )}
+          </div>
+          <p className="mt-0.5 pl-4 text-[12px] text-faint">
+            {SOURCE_LABEL[dimension.data_source]} ·{" "}
+            {Math.round(dimension.raw_value * 100)}% raw
+          </p>
+        </div>
+        <div className="flex shrink-0 items-center gap-3">
           <span
-            className={`rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase ${STATUS_STYLES[dimension.status]}`}
+            className={`text-[12px] font-semibold capitalize ${STATUS_TEXT[dimension.status]}`}
           >
             {dimension.status}
           </span>
-          <span className="w-12 text-right text-sm font-semibold text-navy">
-            {dimension.score}/20
+          <span className="font-display text-lg font-semibold text-text">
+            {dimension.score}
+            <span className="text-[13px] font-normal text-faint">/20</span>
           </span>
-        </span>
+        </div>
       </div>
-      <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100">
+      <div className="ml-4 h-1.5 overflow-hidden rounded-full bg-surface-2">
         <div
           className={`h-full rounded-full ${STATUS_BAR[dimension.status]}`}
-          style={{ width: `${pct}%`, transition: "width 700ms ease" }}
+          style={{ width: `${pct}%`, transition: "width 800ms ease" }}
         />
       </div>
     </li>
@@ -144,25 +182,29 @@ function FixCard({
   onReview: (fix: FixResult) => void;
 }) {
   return (
-    <div className="flex flex-col gap-2 rounded-lg border border-black/10 p-4">
-      <div className="flex items-center gap-2">
-        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-navy text-xs font-bold text-white">
+    <article className="flex flex-col rounded-xl border border-border bg-surface-2/60 p-5 transition-colors hover:border-accent/30">
+      <div className="flex items-center gap-2.5">
+        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-navy font-display text-sm font-semibold text-white">
           {fix.position}
         </span>
-        <span className="text-xs uppercase tracking-wide text-gray-400">
+        <span className="caption text-muted">
           {fix.dimension.replace(/_/g, " ")}
         </span>
       </div>
-      <h3 className="text-sm font-semibold text-navy">{fix.fix_title}</h3>
-      <p className="text-xs font-medium text-teal">{fix.revenue_impact}</p>
+      <h3 className="mt-3 text-[15px] font-semibold leading-snug text-text">
+        {fix.fix_title}
+      </h3>
+      <p className="mt-2 text-[13px] font-medium text-accent">
+        {fix.revenue_impact}
+      </p>
       <button
         type="button"
         onClick={() => onReview(fix)}
-        className="mt-auto rounded-lg border border-teal px-3 py-1.5 text-sm font-medium text-teal hover:bg-teal hover:text-white"
+        className="mt-4 w-full rounded-lg border border-accent/40 bg-surface px-3 py-2 text-sm font-medium text-accent transition-colors hover:bg-accent hover:text-accent-ink"
       >
-        Review
+        Review fix
       </button>
-    </div>
+    </article>
   );
 }
 

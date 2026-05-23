@@ -1,29 +1,24 @@
 import type { RagStatus } from "@/lib/contracts";
 
-/**
- * Composite PRS gauge — a custom SVG arc (no charting dependency). Colour
- * follows RAG status (red < 50, amber 50–74, green 75+).
- */
-
-const RAG_COLOURS: Record<RagStatus, string> = {
-  red: "#DC2626",
-  amber: "#F59E0B",
-  green: "#16A34A",
+const RAG_VAR: Record<RagStatus, string> = {
+  red: "var(--red)",
+  amber: "var(--amber)",
+  green: "var(--green)",
 };
 
 interface ScoreDialProps {
-  score: number; // 0–100
+  score: number;
   ragStatus: RagStatus;
-  size?: number; // px
+  size?: number;
 }
 
-export function ScoreDial({ score, ragStatus, size = 180 }: ScoreDialProps) {
-  const stroke = 14;
+export function ScoreDial({ score, ragStatus, size = 176 }: ScoreDialProps) {
+  const stroke = 10;
   const radius = (size - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
   const clamped = Math.max(0, Math.min(100, score));
   const dashOffset = circumference * (1 - clamped / 100);
-  const colour = RAG_COLOURS[ragStatus];
+  const colour = RAG_VAR[ragStatus];
 
   return (
     <div
@@ -36,7 +31,7 @@ export function ScoreDial({ score, ragStatus, size = 180 }: ScoreDialProps) {
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke="#E5E7EB"
+          stroke="var(--border)"
           strokeWidth={stroke}
         />
         <circle
@@ -49,19 +44,27 @@ export function ScoreDial({ score, ragStatus, size = 180 }: ScoreDialProps) {
           strokeLinecap="round"
           strokeDasharray={circumference}
           strokeDashoffset={dashOffset}
-          style={{ transition: "stroke-dashoffset 700ms ease, stroke 400ms ease" }}
+          style={{
+            transition: "stroke-dashoffset 800ms cubic-bezier(.2,.7,.3,1)",
+          }}
         />
       </svg>
       <div className="absolute flex flex-col items-center">
-        <span className="text-4xl font-bold" style={{ color: colour }}>
+        <span
+          className="font-display text-[42px] font-semibold leading-none"
+          style={{ color: colour }}
+        >
           {clamped}
         </span>
-        <span className="text-xs uppercase tracking-widest text-gray-500">
-          / 100
+        <span className="mt-1 text-[11px] font-medium uppercase tracking-wider text-faint">
+          out of 100
         </span>
         <span
-          className="mt-1 rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase text-white"
-          style={{ backgroundColor: colour }}
+          className="mt-1 rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide"
+          style={{
+            color: colour,
+            backgroundColor: `${colour}18`,
+          }}
         >
           {ragStatus}
         </span>

@@ -4,19 +4,20 @@ import { useState } from "react";
 
 import type { AgentResponse } from "@/lib/contracts";
 
-/**
- * Module C — Ask the Doctor. Renders a pre-loaded exchange on mount (no API
- * call), three quick-action chips, and a free-text box. Submitting calls the
- * M3 agent route (/api/agent), which returns the reasoning trace + answer.
- */
-
 const QUICK_ACTIONS = [
   "Why is my personalisation not working?",
   "What should I fix first?",
   "Show me what good personalisation looks like for my top 3 customer types",
 ];
 
-// Static pre-loaded exchange (design-spec 004) — rendered immediately on load.
+const TOOL_LABEL: Record<string, string> = {
+  fetchBRUIDMatchRate: "Session identity",
+  fetchAutoSegmentCoverage: "Audience segments",
+  fetchSignalFreshness: "Signal freshness",
+  fetchRuleConflicts: "Merchandising rules",
+  fetchABTestCoverage: "Experiment coverage",
+};
+
 const PRE_LOADED_EXCHANGE: AgentResponse = {
   query: "Why is my personalisation not working?",
   intent: "diagnosis",
@@ -94,65 +95,72 @@ export function NLChat() {
   }
 
   return (
-    <div className="rounded-xl border border-black/10 bg-white p-6">
-      {/* Quick-action chips */}
-      <div className="flex flex-wrap gap-2">
-        {QUICK_ACTIONS.map((chip) => (
-          <button
-            key={chip}
-            type="button"
-            onClick={() => ask(chip)}
-            disabled={isLoading}
-            className="rounded-full border border-teal/40 bg-teal/5 px-3 py-1.5 text-xs font-medium text-teal hover:bg-teal/10 disabled:opacity-50"
-          >
-            {chip}
-          </button>
-        ))}
-      </div>
-
-      {/* Input */}
-      <form
-        className="mt-4 flex gap-2"
-        onSubmit={(e) => {
-          e.preventDefault();
-          ask(input);
-        }}
-      >
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask the Doctor about your personalisation…"
-          className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal"
-        />
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="rounded-lg bg-teal px-5 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
-        >
-          Ask
-        </button>
-      </form>
-
-      {isLoading && (
-        <p className="mt-3 animate-pulse text-sm text-gray-500">
-          Consulting Bloomreach data…
+    <div className="animate-rise space-y-6">
+      <section className="shadow-panel rounded-2xl border border-border bg-surface p-6">
+        <h2 className="font-display text-2xl font-medium text-text">
+          Ask the doctor
+        </h2>
+        <p className="mt-1 max-w-2xl text-[14px] text-muted">
+          Plain-English guidance grounded in your Bloomreach signals. Every
+          answer shows which data sources were consulted.
         </p>
-      )}
-      {error && (
-        <div className="mt-3 flex items-center gap-3 text-sm">
-          <span className="text-red">{error}</span>
-          <button
-            type="button"
-            onClick={() => ask(exchanges[exchanges.length - 1]?.query ?? "")}
-            className="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50"
-          >
-            Retry
-          </button>
-        </div>
-      )}
 
-      {/* Exchanges (newest last) */}
-      <div className="mt-6 space-y-6">
+        <div className="mt-5 flex flex-wrap gap-2">
+          {QUICK_ACTIONS.map((chip) => (
+            <button
+              key={chip}
+              type="button"
+              onClick={() => ask(chip)}
+              disabled={isLoading}
+              className="rounded-full border border-border bg-surface-2 px-3.5 py-2 text-left text-[13px] text-text-body transition-colors hover:border-accent/40 hover:bg-accent-soft disabled:opacity-50"
+            >
+              {chip}
+            </button>
+          ))}
+        </div>
+
+        <form
+          className="mt-5 flex gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            ask(input);
+          }}
+        >
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Ask about scores, fixes, or shopper segments…"
+            className="flex-1 rounded-xl border border-border bg-bg px-4 py-3 text-sm text-text-body placeholder:text-faint focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/15"
+          />
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="rounded-xl bg-accent px-6 py-3 text-sm font-semibold text-accent-ink transition-all hover:brightness-105 disabled:opacity-50"
+          >
+            Ask
+          </button>
+        </form>
+
+        {isLoading && (
+          <p className="mt-4 text-[13px] text-muted">
+            Consulting Bloomreach data…
+          </p>
+        )}
+        {error && (
+          <div className="mt-4 flex items-center gap-3 text-sm">
+            <span className="text-red">{error}</span>
+            <button
+              type="button"
+              onClick={() => ask(exchanges[exchanges.length - 1]?.query ?? "")}
+              className="rounded-lg border border-border px-3 py-1 text-xs text-muted hover:text-text"
+            >
+              Retry
+            </button>
+          </div>
+        )}
+      </section>
+
+      <div className="space-y-5">
         {exchanges.map((exchange, i) => (
           <ExchangeView key={i} exchange={exchange} />
         ))}
@@ -179,47 +187,89 @@ function ExchangeView({ exchange }: { exchange: AgentResponse }) {
   }
 
   return (
-    <div className="border-t border-black/5 pt-4 first:border-t-0 first:pt-0">
-      <p className="text-sm font-semibold text-navy">Q: {exchange.query}</p>
-
-      {/* Reasoning trace — collapsed by default */}
-      <details className="mt-2 rounded-lg bg-gray-50 p-3">
-        <summary className="cursor-pointer text-xs font-medium text-gray-500">
-          Reasoning trace ({exchange.reasoning_trace.length} tool calls)
-        </summary>
-        <ul className="mt-2 space-y-1">
-          {exchange.reasoning_trace.map((step, i) => (
-            <li key={i} className="text-xs text-gray-600">
-              <span className="font-mono text-teal">{step.tool_name}</span>
-              {" → "}
-              {step.tool_output_summary}
-            </li>
-          ))}
-        </ul>
-      </details>
-
-      {/* Plain-English answer — expanded */}
-      <div className="mt-3 space-y-2 text-sm text-gray-700">
-        <p className="font-medium text-navy">{answer.summary_sentence}</p>
-        <p>{answer.score_breakdown}</p>
-        <ol className="list-decimal space-y-1 pl-5">
-          {answer.top_3_fixes.map((fix, i) => (
-            <li key={i}>{fix}</li>
-          ))}
-        </ol>
-        <p className="rounded-lg bg-teal/5 px-3 py-2 text-teal">
-          <span className="font-semibold">Next: </span>
-          {answer.suggested_next_action}
-        </p>
-        <button
-          type="button"
-          onClick={copyPlainText}
-          className="text-xs text-gray-400 hover:text-navy"
-        >
-          Copy
-        </button>
+    <article className="shadow-panel overflow-hidden rounded-2xl border border-border bg-surface">
+      <div className="border-b border-border bg-surface-2/50 px-6 py-4">
+        <p className="text-[13px] font-medium text-muted">Your question</p>
+        <p className="mt-1 font-display text-lg text-text">{exchange.query}</p>
       </div>
-    </div>
+
+      <div className="space-y-5 px-6 py-5">
+        <div className="rounded-xl border border-accent/20 bg-accent-soft/50 p-5">
+          <p className="font-display text-[17px] font-medium leading-snug text-text">
+            {answer.summary_sentence}
+          </p>
+          <p className="mt-3 text-[14px] leading-relaxed text-muted">
+            {answer.score_breakdown}
+          </p>
+        </div>
+
+        <div>
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h3 className="text-[14px] font-semibold text-text">
+              Recommended fixes
+            </h3>
+            <span className="caption">intent · {exchange.intent}</span>
+          </div>
+          <ol className="space-y-2">
+            {answer.top_3_fixes.map((fix, i) => (
+              <li
+                key={i}
+                className="flex gap-3 rounded-lg border border-border bg-surface-2/40 px-4 py-3 text-[14px] text-text-body"
+              >
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-navy text-[12px] font-semibold text-white">
+                  {i + 1}
+                </span>
+                {fix}
+              </li>
+            ))}
+          </ol>
+        </div>
+
+        <div className="rounded-xl border border-border bg-surface-2/30 p-5">
+          <h3 className="text-[14px] font-semibold text-text">
+            Data sources consulted
+          </h3>
+          <p className="mt-1 text-[12px] text-faint">
+            {exchange.reasoning_trace.length} signals checked across Discovery,
+            Marketing, and Analytics
+          </p>
+          <ul className="mt-4 space-y-2">
+            {exchange.reasoning_trace.map((step, i) => (
+              <li
+                key={i}
+                className="grid gap-1 rounded-lg border border-border/70 bg-surface px-4 py-3 sm:grid-cols-[160px_1fr]"
+              >
+                <div>
+                  <p className="text-[13px] font-medium text-text">
+                    {TOOL_LABEL[step.tool_name] ?? step.tool_name}
+                  </p>
+                  <p className="mt-0.5 font-mono text-[10px] text-faint">
+                    {step.tool_name}
+                  </p>
+                </div>
+                <p className="text-[13px] leading-snug text-muted">
+                  {step.tool_output_summary}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
+          <p className="text-[14px] text-text-body">
+            <span className="font-semibold text-accent">Next step: </span>
+            {answer.suggested_next_action}
+          </p>
+          <button
+            type="button"
+            onClick={copyPlainText}
+            className="text-[12px] text-faint transition-colors hover:text-text"
+          >
+            Copy answer
+          </button>
+        </div>
+      </div>
+    </article>
   );
 }
 

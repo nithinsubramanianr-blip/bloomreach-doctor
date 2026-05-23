@@ -2,24 +2,15 @@
 
 import type { Persona, PersonaId } from "@/lib/contracts";
 
-/**
- * Persona dropdown. On change it manages the `_br_uid_2` cookie exactly per
- * design-spec 006: always clear the cookie first, then set the new value —
- * EXCEPT for Guest, whose cookie must be deleted (not set to empty string).
- */
-
 function personaLabel(p: Persona): string {
-  // guest -> "Guest (New Prospecting)"; others -> "Sarah — Gifting".
   return p.persona_id === "guest"
     ? `${p.display_name} (${p.archetype_name})`
     : `${p.display_name} — ${p.archetype_name}`;
 }
 
 function applyBruidCookie(persona: Persona): void {
-  // 1. Clear any existing cookie (all personas).
   document.cookie =
     "_br_uid_2=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/";
-  // 2. Set the new cookie only when the persona has a BRUID (not Guest).
   if (persona.bruid_value !== null) {
     document.cookie = `${persona.bruid_value}; path=/`;
   }
@@ -44,16 +35,16 @@ export function PersonaSwitcher({
   }
 
   return (
-    <label className="flex items-center gap-2 text-sm text-white">
-      <span className="hidden sm:inline opacity-80">Viewing as</span>
+    <label className="flex items-center gap-2 text-[12px] text-header-muted">
+      <span className="hidden sm:inline">Viewing as</span>
       <select
         aria-label="Persona"
         value={activePersonaId}
         onChange={handleChange}
-        className="rounded-md border border-white/30 bg-white px-3 py-1.5 text-navy font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-teal"
+        className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-[13px] font-medium text-header-text focus:border-accent focus:outline-none"
       >
         {personas.map((p) => (
-          <option key={p.persona_id} value={p.persona_id}>
+          <option key={p.persona_id} value={p.persona_id} className="text-text">
             {personaLabel(p)}
           </option>
         ))}

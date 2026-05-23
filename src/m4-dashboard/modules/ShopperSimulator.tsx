@@ -8,22 +8,17 @@ import type {
   Persona,
   PersonaId,
 } from "@/lib/contracts";
+import { ProductCard, type RankChange } from "@/components/ProductCard";
 import { searchWithTimeout } from "@/m5-plp/lib/discoveryClient";
 import resultCache from "@/m5-plp/lib/resultCache";
-
-/**
- * Module B — live Shopper Simulator. Calls the Discovery search route per
- * persona + state (shares M5's resultCache, ADR-005-2). Initial Guest data is
- * provided by the server; persona switches fetch in event handlers. Shows
- * rank-change indicators on the After state vs Before. Never a static mockup.
- */
 
 const BANNER =
   "Before: generic ranking — After: personalised results following Doctor recommendations.";
 
 const GRID_LIMIT = 12;
+const COMPARE_LIMIT = 4;
 
-type RankChange = "up" | "down" | "same";
+type LayoutMode = "single" | "compare";
 
 interface ShopperSimulatorProps {
   personas: Persona[];
@@ -38,6 +33,7 @@ export function ShopperSimulator({
 }: ShopperSimulatorProps) {
   const [activePersona, setActivePersona] = useState<PersonaId>("guest");
   const [displayState, setDisplayState] = useState<DemoState>("before");
+  const [layoutMode, setLayoutMode] = useState<LayoutMode>("compare");
   const [before, setBefore] = useState<DiscoveryProduct[]>(initialBefore);
   const [after, setAfter] = useState<DiscoveryProduct[]>(initialAfter);
   const [isLoading, setIsLoading] = useState(false);
@@ -73,8 +69,8 @@ export function ShopperSimulator({
   }
 
   const products = displayState === "before" ? before : after;
+  const personaObj = personas.find((p) => p.persona_id === activePersona);
 
-  // Rank change map: after rank vs before rank (lower number = higher rank).
   const beforeRank = new Map(before.map((p) => [p.product_id, p.rank_position]));
   const rankChangeFor = (product: DiscoveryProduct): RankChange => {
     const prev = beforeRank.get(product.product_id);
@@ -85,122 +81,277 @@ export function ShopperSimulator({
   };
 
   return (
-    <div className="rounded-xl border border-black/10 bg-white p-6">
-      {/* Persona tabs + before/after toggle */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="inline-flex rounded-lg border border-black/10 bg-gray-100 p-1">
+    <div className="animate-rise shadow-panel overflow-hidden rounded-2xl border border-border bg-surface">
+      <div className="border-b border-border px-6 py-5">
+        <h2 className="font-display text-2xl font-medium text-text">
+          Shopper simulator
+        </h2>
+        <p className="mt-1 text-[14px] text-muted">
+          Live Discovery results for{" "}
+          <span className="font-medium text-accent">“necklace”</span> — compare
+          generic vs personalised ranking by shopper type.
+        </p>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border bg-surface-2/40 px-6 py-4">
+        <Segmented>
           {personas.map((p) => (
-            <button
+            <SegButton
               key={p.persona_id}
-              type="button"
+              active={activePersona === p.persona_id}
               onClick={() => selectPersona(p.persona_id)}
-              className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
-                activePersona === p.persona_id
-                  ? "bg-navy text-white shadow-sm"
-                  : "text-gray-600 hover:text-navy"
-              }`}
             >
               {p.display_name}
-            </button>
+            </SegButton>
           ))}
-        </div>
-        <div className="inline-flex rounded-lg border border-black/10 bg-gray-100 p-1">
-          {(["before", "after"] as const).map((state) => (
-            <button
-              key={state}
-              type="button"
-              onClick={() => setDisplayState(state)}
-              className={`rounded-md px-4 py-1.5 text-sm font-medium capitalize transition-colors ${
-                displayState === state
-                  ? "bg-teal text-white shadow-sm"
-                  : "text-gray-600 hover:text-navy"
-              }`}
+        </Segmented>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <Segmented>
+            <span className="caption cursor-default px-3 py-2 text-faint">
+              Layout
+            </span>
+            <SegButton
+              active={layoutMode === "compare"}
+              accent
+              onClick={() => setLayoutMode("compare")}
             >
-              {state}
-            </button>
-          ))}
+              Side by side
+            </SegButton>
+            <SegButton
+              active={layoutMode === "single"}
+              onClick={() => setLayoutMode("single")}
+            >
+              Single view
+            </SegButton>
+          </Segmented>
+
+          {layoutMode === "single" && (
+            <Segmented>
+              <span className="caption cursor-default px-3 py-2 text-faint">
+                State
+              </span>
+              {(["before", "after"] as const).map((state) => (
+                <SegButton
+                  key={state}
+                  active={displayState === state}
+                  accent={state === "after"}
+                  onClick={() => setDisplayState(state)}
+                >
+                  <span className="capitalize">{state}</span>
+                </SegButton>
+              ))}
+            </Segmented>
+          )}
         </div>
       </div>
 
-      <p className="mt-4 rounded-lg bg-gray-50 px-4 py-2 text-sm text-gray-600">
-        {BANNER}
-      </p>
+      {personaObj && <PersonaStrip persona={personaObj} />}
 
-      {/* Grid */}
-      <div
-        className={`mt-4 grid grid-cols-2 gap-3 transition-opacity md:grid-cols-4 ${
-          isLoading ? "opacity-60" : "opacity-100"
-        }`}
-      >
-        {products.length === 0
-          ? Array.from({ length: 8 }).map((_, i) => (
-              <div
-                key={i}
-                className="h-44 animate-pulse rounded-lg border border-black/10 bg-gray-200"
-              />
-            ))
-          : products.slice(0, GRID_LIMIT).map((product) => (
-              <SimProductCard
-                key={product.product_id}
-                product={product}
-                displayState={displayState}
-                rankChange={rankChangeFor(product)}
-              />
-            ))}
+      <div className="px-6 pt-4 text-[14px] text-muted">
+        <p>
+          <span className="font-semibold text-text">Before</span>: generic
+          ranking —{" "}
+          <span className="font-semibold text-text">After</span>: personalised
+          results following Doctor recommendations.
+        </p>
+        {personaObj && layoutMode === "single" && (
+          <p className="mt-1.5 text-[13px] text-faint">
+            {displayState === "before"
+              ? personaObj.plp_before_state
+              : personaObj.plp_after_state}
+          </p>
+        )}
+      </div>
+
+      <span className="sr-only">{BANNER}</span>
+
+      {layoutMode === "compare" ? (
+        <div
+          className={`grid gap-4 px-6 pb-2 pt-5 transition-opacity lg:grid-cols-2 ${
+            isLoading ? "opacity-60" : "opacity-100"
+          }`}
+        >
+          <CompareColumn
+            title="Before"
+            subtitle="Generic ranking"
+            products={before.slice(0, COMPARE_LIMIT)}
+            displayState="before"
+          />
+          <CompareColumn
+            title="After"
+            subtitle="Personalised for this shopper"
+            products={after.slice(0, COMPARE_LIMIT)}
+            displayState="after"
+            rankChangeFor={rankChangeFor}
+            highlight
+          />
+        </div>
+      ) : (
+        <div
+          className={`grid grid-cols-2 gap-4 px-6 pb-2 pt-5 transition-opacity md:grid-cols-4 ${
+            isLoading ? "opacity-60" : "opacity-100"
+          }`}
+        >
+          {products.length === 0
+            ? Array.from({ length: 8 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="h-52 animate-pulse rounded-xl border border-border bg-tile"
+                />
+              ))
+            : products.slice(0, GRID_LIMIT).map((product, i) => (
+                <ProductCard
+                  key={product.product_id}
+                  product={product}
+                  displayState={displayState}
+                  rankChange={rankChangeFor(product)}
+                  index={i}
+                />
+              ))}
+        </div>
+      )}
+
+      <div className="mx-6 flex flex-wrap justify-between gap-2 border-t border-border py-4 text-[12px] text-faint">
+        <span>↑ moved up vs. Before</span>
+        <span>
+          {layoutMode === "compare" || displayState === "after"
+            ? "After reflects personalised boost rules"
+            : "Boost rules inactive"}
+        </span>
       </div>
     </div>
   );
 }
 
-function SimProductCard({
-  product,
+function CompareColumn({
+  title,
+  subtitle,
+  products,
   displayState,
-  rankChange,
+  rankChangeFor,
+  highlight,
 }: {
-  product: DiscoveryProduct;
+  title: string;
+  subtitle: string;
+  products: DiscoveryProduct[];
   displayState: DemoState;
-  rankChange: RankChange;
+  rankChangeFor?: (product: DiscoveryProduct) => RankChange;
+  highlight?: boolean;
 }) {
-  const personalised = displayState === "after" && product.rank_position <= 3;
-  const showChange = displayState === "after";
-
   return (
-    <div className="relative flex flex-col overflow-hidden rounded-lg border border-black/10 bg-white">
-      <span className="absolute left-2 top-2 z-10 flex items-center gap-1 rounded-full bg-navy/90 px-2 py-0.5 text-xs font-semibold text-white">
-        #{product.rank_position}
-        {showChange && rankChange === "up" && (
-          <span className="text-teal" aria-label="moved up">
-            ↑
+    <div
+      className={`rounded-xl border p-4 ${
+        highlight
+          ? "border-accent/30 bg-accent-soft/20"
+          : "border-border bg-surface-2/30"
+      }`}
+    >
+      <div className="mb-4 flex items-baseline justify-between gap-2">
+        <div>
+          <h3 className="font-display text-lg font-medium text-text">{title}</h3>
+          <p className="text-[12px] text-muted">{subtitle}</p>
+        </div>
+        {highlight && (
+          <span className="rounded-full bg-accent px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-accent-ink">
+            Personalised
           </span>
         )}
-        {showChange && rankChange === "down" && (
-          <span className="text-gray-300" aria-label="moved down">
-            ↓
-          </span>
-        )}
-        {showChange && rankChange === "same" && (
-          <span className="text-gray-300" aria-label="no change">
-            –
-          </span>
-        )}
-      </span>
-      {personalised && (
-        <span className="absolute right-2 top-2 z-10 rounded-full bg-teal px-2 py-0.5 text-[10px] font-semibold text-white">
-          Personalised
-        </span>
-      )}
-      <div className="flex h-28 items-center justify-center bg-gray-200 text-xs text-gray-400">
-        {product.category}
       </div>
-      <div className="flex flex-1 flex-col gap-1 p-2">
-        <h4 className="line-clamp-2 text-xs font-medium text-navy">
-          {product.name}
-        </h4>
-        <span className="mt-auto text-sm font-semibold text-navy">
-          £{product.price.toFixed(2)}
-        </span>
+      <div className="grid grid-cols-2 gap-3">
+        {products.map((product, i) => (
+          <ProductCard
+            key={product.product_id}
+            product={product}
+            displayState={displayState}
+            rankChange={rankChangeFor?.(product)}
+            index={i}
+          />
+        ))}
       </div>
     </div>
+  );
+}
+
+function Segmented({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="inline-flex items-center rounded-xl border border-border bg-surface p-1">
+      {children}
+    </div>
+  );
+}
+
+function SegButton({
+  active,
+  accent,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  accent?: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  const activeClass = accent
+    ? "bg-accent text-accent-ink"
+    : "bg-surface text-text shadow-sm";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-lg px-4 py-2 text-[13px] font-medium transition-colors ${
+        active ? activeClass : "text-muted hover:text-text"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function PersonaStrip({ persona }: { persona: Persona }) {
+  return (
+    <div className="mx-6 mt-4 flex items-center gap-4 rounded-xl border border-accent/20 bg-accent-soft/60 px-4 py-4">
+      <div className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-navy font-display text-lg font-semibold text-white">
+        {persona.display_name.charAt(0)}
+      </div>
+      <div>
+        <div className="text-[15px] font-semibold text-text">
+          {persona.display_name}{" "}
+          <span className="font-normal text-muted">
+            · {persona.archetype_name}
+          </span>
+        </div>
+        <div className="mt-2 flex flex-wrap gap-2">
+          <PersonaChip ok={persona.bruid_present}>
+            {persona.bruid_present ? "BRUID present" : "No BRUID"}
+          </PersonaChip>
+          <PersonaChip>{persona.segment_name}</PersonaChip>
+          <PersonaChip>
+            {persona.session_count} sessions · {persona.page_views} views
+          </PersonaChip>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PersonaChip({
+  children,
+  ok,
+}: {
+  children: React.ReactNode;
+  ok?: boolean;
+}) {
+  return (
+    <span
+      className={`rounded-md px-2.5 py-1 text-[11px] font-medium ${
+        ok
+          ? "bg-green/10 text-green"
+          : "bg-surface text-muted ring-1 ring-border"
+      }`}
+    >
+      {children}
+    </span>
   );
 }
 

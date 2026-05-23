@@ -9,16 +9,11 @@ import type {
   PRSState,
   Persona,
 } from "@/lib/contracts";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { ApprovalModal } from "./components/ApprovalModal";
 import { NLChat } from "./modules/NLChat";
 import { PRSScorecard } from "./modules/PRSScorecard";
 import { ShopperSimulator } from "./modules/ShopperSimulator";
-
-/**
- * M4 Dashboard shell — navy header, three tabs (Module A/B/C), Option X
- * activation (refetches /api/prs?state=after for the live 52 -> 70 refresh),
- * and the approval-modal state (no API write).
- */
 
 type Tab = "scorecard" | "simulator" | "doctor";
 
@@ -29,9 +24,9 @@ interface ApprovedAction {
 }
 
 const TABS: { id: Tab; label: string }[] = [
-  { id: "scorecard", label: "PRS Scorecard" },
-  { id: "simulator", label: "Shopper Simulator" },
-  { id: "doctor", label: "Ask the Doctor" },
+  { id: "scorecard", label: "Scorecard" },
+  { id: "simulator", label: "Shopper simulator" },
+  { id: "doctor", label: "Ask the doctor" },
 ];
 
 interface DashboardProps {
@@ -74,7 +69,6 @@ export function Dashboard({
   }
 
   function approveFix(fix: FixResult) {
-    // Application state ONLY — no API write (CLAUDE.md invariant #8).
     setApprovedActions((prev) => [
       ...prev,
       {
@@ -86,43 +80,49 @@ export function Dashboard({
   }
 
   return (
-    <div className="flex flex-1 flex-col bg-gray-50">
-      {/* Navy header */}
-      <header className="flex items-center justify-between bg-navy px-6 py-3 text-white">
-        <div className="flex items-baseline gap-3">
-          <span className="text-lg font-semibold">
-            Personalization Performance Doctor
-          </span>
-          <span className="text-sm opacity-70">Kendra Scott</span>
+    <div className="flex min-h-full flex-col bg-bg">
+      <header className="sticky top-0 z-50 border-b border-navy/20 bg-header-bg text-header-text shadow-[0_4px_24px_-10px_rgba(0,0,0,0.35)]">
+        <div className="mx-auto flex w-full max-w-[1200px] flex-wrap items-center justify-between gap-4 px-6 py-4">
+          <div className="min-w-0">
+            <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-header-muted">
+              Kendra Scott · Bloomreach Discovery
+            </p>
+            <h1 className="font-display text-[22px] font-medium leading-tight text-header-text">
+              Personalization Performance Doctor
+            </h1>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <nav
+              className="flex rounded-full border border-white/10 bg-white/5 p-1"
+              aria-label="Dashboard modules"
+            >
+              {TABS.map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`rounded-full px-4 py-1.5 text-[13px] font-medium transition-colors ${
+                    activeTab === tab.id
+                      ? "bg-accent text-accent-ink shadow-sm"
+                      : "text-header-muted hover:text-header-text"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </nav>
+            <Link
+              href="/plp"
+              className="hidden rounded-full border border-white/15 px-3 py-1.5 text-[12px] text-header-muted transition-colors hover:border-white/30 hover:text-header-text sm:inline"
+            >
+              Live PLP
+            </Link>
+            <ThemeToggle variant="header" />
+          </div>
         </div>
-        <Link
-          href="/plp"
-          className="text-sm underline-offset-2 opacity-90 hover:underline"
-        >
-          View live PLP →
-        </Link>
       </header>
 
-      {/* Tab bar */}
-      <nav className="flex gap-1 border-b border-black/10 bg-white px-6">
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => setActiveTab(tab.id)}
-            className={`-mb-px border-b-2 px-4 py-3 text-sm font-medium transition-colors ${
-              activeTab === tab.id
-                ? "border-teal text-teal"
-                : "border-transparent text-gray-500 hover:text-navy"
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </nav>
-
-      {/* Active module */}
-      <main className="flex-1 p-6">
+      <main className="mx-auto w-full max-w-[1200px] flex-1 px-6 py-8">
         {activeTab === "scorecard" && (
           <PRSScorecard
             prsState={prsState}

@@ -9,19 +9,11 @@ import type {
   Persona,
   PersonaId,
 } from "@/lib/contracts";
+import { ProductCard } from "@/components/ProductCard";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { PersonaSwitcher } from "./components/PersonaSwitcher";
-import { ProductCard } from "./components/ProductCard";
 import { searchWithTimeout } from "./lib/discoveryClient";
 import resultCache from "./lib/resultCache";
-
-/**
- * M5 PLP — live product listing page (synthetic-backed for now).
- *
- * Initial Guest/Before products come from the server (page.tsx). Persona
- * switches and Before/After toggles fetch in event handlers (not effects),
- * deduped through the shared resultCache. The grid is never blanked: on error
- * the previous products stay on screen.
- */
 
 interface PLPClientProps {
   personas: Persona[];
@@ -40,7 +32,6 @@ export function PLPClient({ personas, initialProducts }: PLPClientProps) {
       setProducts(cached.products);
       return;
     }
-    // The server already provided the Guest/Before set.
     if (persona === "guest" && state === "before") {
       setProducts(initialProducts);
       return;
@@ -74,50 +65,55 @@ export function PLPClient({ personas, initialProducts }: PLPClientProps) {
       : activePersonaObj?.plp_after_state;
 
   return (
-    <div className="flex flex-1 flex-col">
-      {/* Navy header */}
-      <header className="flex items-center justify-between bg-navy px-6 py-3 text-white">
-        <div className="flex items-baseline gap-3">
-          <span className="text-lg font-semibold">Kendra Scott</span>
-          <span className="text-xs uppercase tracking-widest opacity-70">
-            Search: “necklace”
-          </span>
-        </div>
-        <div className="flex items-center gap-4">
-          <PersonaSwitcher
-            personas={personas}
-            activePersonaId={activePersona}
-            onChange={handlePersona}
-          />
-          <Link
-            href="/"
-            className="text-sm underline-offset-2 opacity-90 hover:underline"
-          >
-            Open Doctor →
-          </Link>
+    <div className="flex min-h-full flex-col bg-bg">
+      <header className="sticky top-0 z-50 border-b border-navy/20 bg-header-bg text-header-text shadow-[0_4px_24px_-10px_rgba(0,0,0,0.35)]">
+        <div className="mx-auto flex w-full max-w-[1200px] flex-wrap items-center justify-between gap-4 px-6 py-4">
+          <div>
+            <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-header-muted">
+              Kendra Scott · Live PLP
+            </p>
+            <h1 className="font-display text-[22px] font-medium text-header-text">
+              Necklace search
+            </h1>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <PersonaSwitcher
+              personas={personas}
+              activePersonaId={activePersona}
+              onChange={handlePersona}
+            />
+            <Link
+              href="/"
+              className="hidden rounded-full border border-white/15 px-3 py-1.5 text-[12px] text-header-muted transition-colors hover:border-white/30 hover:text-header-text sm:inline"
+            >
+              Open Doctor
+            </Link>
+            <ThemeToggle variant="header" />
+          </div>
         </div>
       </header>
 
-      {/* Before/After control bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-black/10 bg-white px-6 py-3">
-        <BeforeAfterToggle value={displayState} onChange={handleState} />
-        {stateBlurb && (
-          <p className="max-w-xl text-sm text-gray-600">{stateBlurb}</p>
-        )}
+      <div className="border-b border-border bg-surface">
+        <div className="mx-auto flex w-full max-w-[1200px] flex-wrap items-center justify-between gap-4 px-6 py-4">
+          <BeforeAfterToggle value={displayState} onChange={handleState} />
+          {stateBlurb && (
+            <p className="max-w-xl text-[13px] text-muted">{stateBlurb}</p>
+          )}
+        </div>
       </div>
 
-      {/* Product grid */}
-      <main className="flex-1 bg-gray-50 px-6 py-6">
+      <main className="mx-auto w-full max-w-[1200px] flex-1 px-6 py-8">
         <div
           className={`grid grid-cols-2 gap-4 transition-opacity md:grid-cols-4 ${
             isLoading ? "opacity-60" : "opacity-100"
           }`}
         >
-          {products.map((product) => (
+          {products.map((product, i) => (
             <ProductCard
               key={product.product_id}
               product={product}
               displayState={displayState}
+              index={i}
             />
           ))}
         </div>
@@ -134,16 +130,18 @@ function BeforeAfterToggle({
   onChange: (state: DemoState) => void;
 }) {
   return (
-    <div className="inline-flex rounded-lg border border-black/10 bg-gray-100 p-1">
+    <div className="inline-flex rounded-xl border border-border bg-surface-2 p-1">
       {(["before", "after"] as const).map((state) => (
         <button
           key={state}
           type="button"
           onClick={() => onChange(state)}
-          className={`rounded-md px-4 py-1.5 text-sm font-medium capitalize transition-colors ${
+          className={`rounded-lg px-4 py-2 text-[13px] font-medium capitalize transition-colors ${
             value === state
-              ? "bg-teal text-white shadow-sm"
-              : "text-gray-600 hover:text-navy"
+              ? state === "after"
+                ? "bg-accent text-accent-ink"
+                : "bg-surface text-text shadow-sm"
+              : "text-muted hover:text-text"
           }`}
         >
           {state}

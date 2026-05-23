@@ -209,6 +209,8 @@ export interface Segment {
 // Discovery search (M1 searchProducts / M5 PLP / M4 Module B)
 // ---------------------------------------------------------------------------
 
+export type Affinity = "gift" | "premium" | "bestseller";
+
 export interface DiscoveryProduct {
   product_id: string;
   name: string;
@@ -217,6 +219,9 @@ export interface DiscoveryProduct {
   category: string;
   rank_position: number; // 1-based
   is_personalised: boolean;
+  // Presentation-only passthrough (does not affect ranking):
+  image_url?: string;
+  affinity?: Affinity;
 }
 
 export interface DiscoverySearchResult {

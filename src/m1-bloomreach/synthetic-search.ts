@@ -1,6 +1,7 @@
 import "server-only";
 
 import type {
+  Affinity,
   DemoState,
   DiscoveryProduct,
   DiscoverySearchResult,
@@ -45,6 +46,14 @@ function genericComparator(a: Product, b: Product): number {
   return a.product_id.localeCompare(b.product_id);
 }
 
+/** Presentation-only affinity tag derived from the product flags. */
+function affinityOf(p: Product): Affinity | undefined {
+  if (p.gift_eligible) return "gift";
+  if (p.price_band === "premium" || p.is_new_arrival) return "premium";
+  if (p.is_bestseller) return "bestseller";
+  return undefined;
+}
+
 function toDiscoveryProduct(
   p: Product,
   rank: number,
@@ -58,6 +67,8 @@ function toDiscoveryProduct(
     category: p.category,
     rank_position: rank,
     is_personalised: personalised,
+    image_url: p.image_url,
+    affinity: affinityOf(p),
   };
 }
 

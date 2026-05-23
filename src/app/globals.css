@@ -1,24 +1,164 @@
 @import "tailwindcss";
 
 /*
- * Personalization Performance Doctor — design palette (CLAUDE.md "Design Palette").
- * Tailwind v4 reads these @theme tokens, exposing utilities like `bg-navy`,
- * `text-teal`, `border-amber`, etc. The demo is light-mode only (no dark mode):
- * the RAG palette depends on fixed colours.
+ * Personalization Performance Doctor — Kendra Scott demo dashboard.
+ * Navy + teal brand palette, editorial headings, minimal mono usage.
  */
-@theme {
-  --color-navy: #1b3a5c;
-  --color-teal: #0e7c7b;
-  --color-amber: #f59e0b;
-  --color-red: #dc2626;
-  --color-green: #16a34a;
+:root,
+:root[data-theme="light"] {
+  --bg: #f4f6f9;
+  --surface: #ffffff;
+  --surface-2: #eef2f6;
+  --tile: #e8edf2;
+  --border: #dde3ea;
+  --border-strong: #c5ced8;
+  --text: #1b3a5c;
+  --text-body: #334155;
+  --muted: #64748b;
+  --faint: #94a3b8;
+  --navy: #1b3a5c;
+  --navy-soft: #2a4a6b;
+  --accent: #0e7c7b;
+  --accent-ink: #ffffff;
+  --accent-soft: #e6f4f4;
+  --accent-muted: #0e7c7b33;
+  --red: #dc2626;
+  --amber: #f59e0b;
+  --green: #16a34a;
+  --shadow: 0 1px 2px rgba(27, 58, 92, 0.04), 0 8px 24px -8px rgba(27, 58, 92, 0.1);
+  --header-bg: #1b3a5c;
+  --header-text: #ffffff;
+  --header-muted: #a8bdd4;
+}
 
-  --color-background: #ffffff;
-  --color-foreground: #1b3a5c;
+:root[data-theme="dark"] {
+  --bg: #0c1117;
+  --surface: #151b24;
+  --surface-2: #1c2430;
+  --tile: #1a222d;
+  --border: #2a3441;
+  --border-strong: #3d4a5c;
+  --text: #e8eef5;
+  --text-body: #cbd5e1;
+  --muted: #94a3b8;
+  --faint: #64748b;
+  --navy: #1b3a5c;
+  --navy-soft: #243f5c;
+  --accent: #14a3a1;
+  --accent-ink: #041414;
+  --accent-soft: #0e2a2a;
+  --accent-muted: #14a3a133;
+  --red: #f87171;
+  --amber: #fbbf24;
+  --green: #4ade80;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.2), 0 8px 24px -8px rgba(0, 0, 0, 0.45);
+  --header-bg: #111820;
+  --header-text: #e8eef5;
+  --header-muted: #64748b;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-tile: var(--tile);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-text: var(--text);
+  --color-text-body: var(--text-body);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-navy: var(--navy);
+  --color-navy-soft: var(--navy-soft);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-muted: var(--accent-muted);
+  --color-red: var(--red);
+  --color-amber: var(--amber);
+  --color-green: var(--green);
+  --color-header-bg: var(--header-bg);
+  --color-header-text: var(--header-text);
+  --color-header-muted: var(--header-muted);
+
+  --font-display: var(--font-fraunces), Georgia, serif;
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-mono: var(--font-jbmono), monospace;
 }
 
 body {
-  background: var(--color-background);
-  color: var(--color-foreground);
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text-body);
+  font-family: var(--font-inter), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+.caption {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.theme-toggle-moon {
+  display: block;
+}
+.theme-toggle-sun {
+  display: none;
+}
+:root[data-theme="dark"] .theme-toggle-moon {
+  display: none;
+}
+:root[data-theme="dark"] .theme-toggle-sun {
+  display: block;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.animate-rise {
+  opacity: 0;
+  animation: rise 0.45s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-rise {
+    opacity: 1;
+    animation: none;
+  }
+}
+
+@keyframes improvePulse {
+  0% {
+    background-color: transparent;
+  }
+  20% {
+    background-color: var(--accent-soft);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+.improve-pulse {
+  animation: improvePulse 1.8s ease-out;
+}
+
+.shadow-panel {
+  box-shadow: var(--shadow);
 }
