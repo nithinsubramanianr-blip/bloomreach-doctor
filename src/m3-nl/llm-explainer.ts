@@ -74,7 +74,12 @@ export async function explainWithClaude(
   state: DemoState,
   prs: PRSState
 ): Promise<{ trace: ReasoningTraceStep[]; llm_response: AgentResponse["llm_response"] }> {
-  const client = new Anthropic({ apiKey: serverEnv.anthropicApiKey() });
+  const baseURL = serverEnv.anthropicBaseUrl();
+  const client = new Anthropic({
+    apiKey: serverEnv.anthropicApiKey(),
+    // Only override when set — otherwise the SDK targets api.anthropic.com.
+    ...(baseURL ? { baseURL } : {}),
+  });
   const trace: ReasoningTraceStep[] = [];
   const messages: Anthropic.MessageParam[] = [{ role: "user", content: query }];
 

@@ -22,6 +22,10 @@ export const serverEnv = {
   marketingMcpUrl: () => process.env.BLOOMREACH_MCP_MARKETING_URL ?? "",
   analyticsMcpUrl: () => process.env.BLOOMREACH_MCP_ANALYTICS_URL ?? "",
   anthropicApiKey: () => process.env.ANTHROPIC_API_KEY ?? "",
+  // Optional Anthropic-compatible gateway (e.g. https://gateway.bounteous.tools).
+  // Empty => SDK default (https://api.anthropic.com). Lets a personal key (direct)
+  // and an org key (via gateway) both work — just swap the .env values.
+  anthropicBaseUrl: () => process.env.ANTHROPIC_BASE_URL ?? "",
   claudeModel: () =>
     process.env.CLAUDE_MODEL ?? "claude-sonnet-4-20250514",
 };

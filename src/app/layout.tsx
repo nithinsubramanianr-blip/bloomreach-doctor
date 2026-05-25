@@ -38,7 +38,10 @@ export default function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body className="flex min-h-full flex-col bg-bg font-sans text-text-body">
+      <body
+        suppressHydrationWarning
+        className="flex min-h-full flex-col bg-bg font-sans text-text-body"
+      >
         {children}
         <ScrollToTop />
       </body>
