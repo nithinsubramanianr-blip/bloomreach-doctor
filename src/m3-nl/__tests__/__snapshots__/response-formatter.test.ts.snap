@@ -1,0 +1,25 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`formatResponse matches the M3 → M4 contract shape (snapshot) 1`] = `
+{
+  "intent": "diagnosis",
+  "llm_response": {
+    "score_breakdown": "BRUID 8/20, AutoSegment 6/20.",
+    "suggested_next_action": "Create the three segments today.",
+    "summary_sentence": "PRS is 52/100 due to low BRUID match.",
+    "top_3_fixes": [
+      "Create segments",
+      "Enable BRUID",
+      "Configure A/B",
+    ],
+  },
+  "query": "Why is my personalisation not working?",
+  "reasoning_trace": [
+    {
+      "tool_input": {},
+      "tool_name": "fetchBRUIDMatchRate",
+      "tool_output_summary": "22% match rate",
+    },
+  ],
+}
+`;

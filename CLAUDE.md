@@ -11,7 +11,7 @@ Hackathon: Bloomreach Loomi Connect AI Hackathon — Build window: May 26 – Ju
 
 | Component | Name | What It Does | Owner |
 |---|---|---|---|
-| C1 | Next.js PLP | Product listing page. Renders Discovery search results. Persona switcher. Result caching. | TA3 |
+| C1 | React PLP (Vite) | Product listing page. Renders Discovery search results. Persona switcher. Result caching. Mounted at route `/` of the shared Vite app (which also hosts M4 at `/doctor`). | TA3 |
 | C2 | Bloomreach Discovery | 50-product catalogue. BRUID tracking. Three segment-scoped boost rules (pre-created **INACTIVE**). | TA1 |
 | C3 | Bloomreach Engagement | Three persona behavioral profiles pre-seeded. Three manual segments linked to Discovery. | TA1 |
 | C4 | PPD Agent | PRS dashboard (Modules A/B/C). NL interface with true agentic tool selection. Fix list. Human approval layer. | TA1+TA2+TA3 |
@@ -27,7 +27,7 @@ Hackathon: Bloomreach Loomi Connect AI Hackathon — Build window: May 26 – Ju
 | M2 | PRS Scoring Engine | `/src/m2-scoring/` | TA2 |
 | M3 | Natural Language Interface | `/src/m3-nl/` | TA2 |
 | M4 | PPD Dashboard UI | `/src/m4-dashboard/` | TA3 |
-| M5 | Next.js PLP | `/src/m5-plp/` | TA3 |
+| M5 | React PLP | `/src/m5-plp/` | TA3 |
 
 **Critical:** The integration layer folder is `/src/m1-bloomreach/` — NOT `/src/m1-mcp/`. All references must use this path.
 
@@ -58,7 +58,7 @@ bloomreach-doctor/
 │   ├── 003-prs-scoring-engine/
 │   ├── 004-nl-interface/
 │   ├── 005-dashboard-ui/
-│   ├── 006-nextjs-plp/
+│   ├── 006-react-plp/
 │   └── 007-submission-artifacts/
 ├── tests/
 │   └── integration/
@@ -77,7 +77,14 @@ bloomreach-doctor/
 │       ├── sarah-after.json
 │       ├── alex-before.json
 │       └── alex-after.json
+├── index.html                       (Vite HTML entry)
+├── vite.config.ts
+├── tsconfig.json
+├── package.json                     (single shared manifest for M4 + M5)
 └── src/
+    ├── main.tsx                     (ReactDOM root, wraps <App /> in <BrowserRouter>)
+    ├── App.tsx                      (Routes: "/" → PLPPage, "/doctor" → M4 App)
+    ├── index.css                    (Tailwind directives)
     ├── m1-bloomreach/
     │   ├── discovery-client.js       (BRUID match rate, rule conflict detection)
     │   ├── engagement-client.js      (persona profiles, segment management)
@@ -97,8 +104,8 @@ bloomreach-doctor/
     │   ├── tools-registry.js         (registers M1 fetchers as Claude tools)
     │   ├── llm-explainer.js          (ONLY file that imports @anthropic-ai/sdk)
     │   └── response-formatter.js     (formats agent response for M4)
-    ├── m4-dashboard/
-    │   ├── App.tsx
+    ├── m4-dashboard/                 (mounted at route "/doctor")
+    │   ├── App.tsx                   (M4 root — rendered by router; not its own Vite entry)
     │   ├── modules/
     │   │   ├── PRSScorecard.tsx      (Module A)
     │   │   ├── ShopperSimulator.tsx  (Module B — live Discovery calls)
@@ -106,12 +113,14 @@ bloomreach-doctor/
     │   └── components/
     │       ├── ApprovalModal.tsx
     │       └── ScoreDial.tsx
-    └── m5-plp/
-        ├── app/page.tsx
+    └── m5-plp/                       (mounted at route "/")
+        ├── pages/PLPPage.tsx         (top-level route component — replaces former app/page.tsx)
         ├── components/PersonaSwitcher.tsx
         ├── components/ProductCard.tsx
-        ├── lib/resultCache.ts
-        └── lib/discoveryClient.ts
+        ├── components/BeforeAfterToggle.tsx
+        ├── components/ProductGrid.tsx
+        ├── lib/resultCache.ts        (singleton — shared in-memory with M4)
+        └── lib/discoveryClient.ts    (reads import.meta.env.VITE_DISCOVERY_ENDPOINT)
 ```
 
 ---
@@ -346,12 +355,12 @@ Wait for my approval before doing anything.
 
 | Spec | Module | Feature | Req | Arch | Design | Impl | Test |
 |---|---|---|---|---|---|---|---|
-| 001 | C5 | Synthetic Data Layer | **approved** | **approved** | **approved** | ⬜ | ⬜ |
-| 002 | M1 | Bloomreach Integration Layer | **approved** | **approved** | **approved** | ⬜ | ⬜ |
-| 003 | M2 | PRS Scoring Engine | **approved** | **approved** | **approved** | ⬜ | ⬜ |
-| 004 | M3 | Natural Language Interface | **approved** | **approved** | **approved** | ⬜ | ⬜ |
-| 005 | M4 | PPD Dashboard UI | **approved** | **approved** | **approved** | ⬜ | ⬜ |
-| 006 | M5 | Next.js PLP | **approved** | **approved** | **approved** | ⬜ | ⬜ |
+| 001 | C5 | Synthetic Data Layer | **approved** | **approved** | **approved** | ✅ | ⬜ |
+| 002 | M1 | Bloomreach Integration Layer | **approved** | **approved** | **approved** | ✅ | ⬜ |
+| 003 | M2 | PRS Scoring Engine | **approved** | **approved** | **approved** | ✅ | ⬜ |
+| 004 | M3 | Natural Language Interface | **approved** | **approved** | **approved** | ✅ | ⬜ |
+| 005 | M4 | PPD Dashboard UI | **approved** | **approved** | **approved** | ✅ | ⬜ |
+| 006 | M5 | React PLP | **approved** | **approved** | **approved** | ✅ | ⬜ |
 | 007 | — | Submission Artifacts | **approved** | ⬜ | ⬜ | ⬜ | ⬜ |
 
 Build dependency chain:
@@ -385,7 +394,8 @@ feature/m1-bloomreach
 feature/m2-scoring
 feature/m3-nl
 feature/m4-dashboard
-feature/m5-plp
+feature/m5-react-plp
+feature/react-app   (current — unified Vite app hosting M4 + M5)
 ```
 
 ---
@@ -402,8 +412,7 @@ feature/m5-plp
 
 ```bash
 npm install
-npm run dev          # M4 dashboard (React/Vite)
-npm run dev:plp      # M5 Next.js PLP
+npm run dev          # Unified Vite app — serves "/" (M5 PLP) and "/doctor" (M4 dashboard)
 npm test             # Jest unit tests
 npm run test:e2e     # Integration test (full demo flow)
 ```
@@ -417,7 +426,7 @@ npm run test:e2e     # Integration test (full demo flow)
 | `BLOOMREACH_MCP_MARKETING_URL` | No | — | Marketing MCP endpoint |
 | `BLOOMREACH_MCP_ANALYTICS_URL` | No | — | Analytics MCP endpoint |
 | `ANTHROPIC_API_KEY` | Yes (M3) | — | Claude API — Module C |
-| `NEXT_PUBLIC_DISCOVERY_ENDPOINT` | Yes (M5) | — | Discovery search endpoint for PLP |
+| `VITE_DISCOVERY_ENDPOINT` | Yes (M5) | — | Discovery search endpoint for PLP. Must be `VITE_` prefixed to be exposed by Vite to client code. |
 | `DATA_SOURCE` | No | `synthetic` | `synthetic` or `live` |
 | `CLAUDE_MODEL` | No | `claude-sonnet-4-20250514` | Override Claude model |
 

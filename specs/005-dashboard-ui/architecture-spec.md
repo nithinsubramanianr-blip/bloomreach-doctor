@@ -88,3 +88,15 @@ On Approve click:
 - Design tokens mapped to Tailwind config: `navy` = `#1B3A5C`, `teal` = `#0E7C7B`
 - All monetary values in GBP (£ symbol)
 - No inline styles except dynamic SVG arc calculations in ScoreDial
+
+## Shared Vite Root (revised 2026-05-25)
+
+M4 and M5 share a single Vite app. M4 Dashboard mounts at route `/doctor`
+via React Router. The Vite entry (`src/main.tsx` / `src/App.tsx` / router
+config) is owned by spec 006. M4 contributes route components only.
+Module B's `resultCache` import path is unchanged
+(`src/m5-plp/lib/resultCache.ts`); because both modules now run in the
+same JS bundle, the singleton is naturally in-memory shared.
+
+This is a clarification — M4 internals (component tree, ADRs, state model,
+data flow above) are unaffected.
