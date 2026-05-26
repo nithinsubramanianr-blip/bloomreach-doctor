@@ -1,7 +1,7 @@
 {
   "_meta": {
-    "description": "Three KS shopper personas for the PPD demo. All use demo_query: 'necklace'. Replaces all prior archetype files.",
-    "brand": "kendra-scott",
+    "description": "Three Bounteous shopper personas for the PPD demo. All use demo_query: 'necklace'. Replaces all prior archetype files.",
+    "brand": "Bounteous",
     "generated_at": "2026-05-22T00:00:00Z",
     "version": "2.0"
   },
@@ -24,7 +24,12 @@
       "demo_query": "necklace",
       "plp_before_state": "Bestsellers at top — generic ranking, no personalisation active",
       "plp_after_state": "Bestsellers at top — Rule 3 active (is_bestseller boost for New Prospecting segment)",
-      "personalisation_gap": "Without BRUID, Bloomreach cannot identify this visitor across sessions. Rule 3 targets the segment but BRUID is required for cross-session recognition."
+      "personalisation_gap": "Without BRUID, Bloomreach cannot identify this visitor across sessions. Rule 3 targets the segment but BRUID is required for cross-session recognition.",
+      "journey": [
+        { "type": "page_view", "category": "necklace", "timestamp": "2026-05-25T14:02:00Z" },
+        { "type": "page_view", "category": "earrings", "timestamp": "2026-05-25T14:04:00Z" },
+        { "type": "search", "category": "necklace", "timestamp": "2026-05-25T14:05:00Z" }
+      ]
     },
     {
       "persona_id": "sarah",
@@ -44,7 +49,18 @@
       "demo_query": "necklace",
       "plp_before_state": "Generic ranking — Rule 1 INACTIVE, gift products buried",
       "plp_after_state": "Gift sets at top — Rule 1 active (gift_eligible boost for Gifting Intent segment)",
-      "personalisation_gap": "BRUID present, segment assigned. Pre-fix: rule inactive so no personalisation. Post-fix: Rule 1 active, gift products surface at top."
+      "personalisation_gap": "BRUID present, segment assigned. Pre-fix: rule inactive so no personalisation. Post-fix: Rule 1 active, gift products surface at top.",
+      "journey": [
+        { "type": "search", "category": "gift", "timestamp": "2026-05-09T19:20:00Z" },
+        { "type": "page_view", "category": "necklace", "timestamp": "2026-05-09T19:22:00Z" },
+        { "type": "page_view", "category": "necklace", "timestamp": "2026-05-11T20:05:00Z" },
+        { "type": "page_view", "category": "earrings", "timestamp": "2026-05-11T20:08:00Z" },
+        { "type": "wishlist_add", "category": "necklace", "timestamp": "2026-05-11T20:10:00Z" },
+        { "type": "page_view", "category": "bracelet", "timestamp": "2026-05-13T18:40:00Z" },
+        { "type": "page_view", "category": "necklace", "timestamp": "2026-05-13T18:43:00Z" },
+        { "type": "wishlist_add", "category": "bracelet", "timestamp": "2026-05-15T21:02:00Z" },
+        { "type": "page_view", "category": "necklace", "timestamp": "2026-05-15T21:05:00Z" }
+      ]
     },
     {
       "persona_id": "alex",
@@ -64,7 +80,17 @@
       "demo_query": "necklace",
       "plp_before_state": "Generic ranking — Rule 2 INACTIVE, premium/new arrivals not surfaced",
       "plp_after_state": "Premium and new arrivals at top — Rule 2 active (is_new_arrival OR price_band=premium boost for High Value Returning segment)",
-      "personalisation_gap": "Strong BRUID + 3 segment memberships + fresh signals. Pre-fix: rule inactive. Post-fix: full 1:1 personalisation active — this is the gold standard contrast against Guest."
+      "personalisation_gap": "Strong BRUID + 3 segment memberships + fresh signals. Pre-fix: rule inactive. Post-fix: full 1:1 personalisation active — this is the gold standard contrast against Guest.",
+      "journey": [
+        { "type": "page_view", "category": "necklace", "timestamp": "2026-05-08T10:15:00Z" },
+        { "type": "purchase", "category": "necklace", "timestamp": "2026-05-08T10:40:00Z" },
+        { "type": "page_view", "category": "ring", "timestamp": "2026-05-12T09:30:00Z" },
+        { "type": "page_view", "category": "necklace", "timestamp": "2026-05-12T09:35:00Z" },
+        { "type": "wishlist_add", "category": "necklace", "timestamp": "2026-05-12T09:38:00Z" },
+        { "type": "purchase", "category": "earrings", "timestamp": "2026-05-16T13:12:00Z" },
+        { "type": "page_view", "category": "necklace", "timestamp": "2026-05-20T11:50:00Z" },
+        { "type": "purchase", "category": "necklace", "timestamp": "2026-05-20T12:05:00Z" }
+      ]
     }
   ]
 }

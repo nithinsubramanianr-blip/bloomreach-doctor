@@ -74,7 +74,9 @@ function toDiscoveryProduct(
 
 /**
  * Runs the synthetic search for a persona + state and returns a ranked result.
- * Results are scoped to necklace-category products (the hardcoded demo query).
+ * Returns the full catalogue (all categories) so the PLP reads like a real
+ * store with working category facets; the persona boost rules below still
+ * personalise the ranking by product flags, independent of category.
  */
 export async function syntheticSearch(
   personaId: PersonaId,
@@ -89,10 +91,9 @@ export async function syntheticSearch(
   }
 
   const all = await loadProducts();
-  const necklaces = all.filter((p) => p.category === "necklace");
 
   // Base generic ranking — identical for every persona ("before").
-  const ranked = [...necklaces].sort(genericComparator);
+  const ranked = [...all].sort(genericComparator);
 
   if (state === "after") {
     // Apply the persona's boost rule: boosted products rise to the top,

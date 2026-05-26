@@ -26,14 +26,41 @@ interface ProductCardProps {
   index?: number;
 }
 
+/** Stable 32-bit hash so each product id maps to the same tile every render. */
+function hashId(id: string): number {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  return h;
+}
+
+/**
+ * Deterministic, swap-ready product tile: a two-tone gradient derived from the
+ * product id. No external or copyrighted imagery — drop a real file at
+ * `image_url` and it overlays the gradient automatically.
+ */
+function tileStyle(productId: string): React.CSSProperties {
+  const h = hashId(productId);
+  const hue1 = h % 360;
+  const hue2 = (hue1 + 35 + (h % 50)) % 360;
+  return {
+    backgroundImage: `linear-gradient(135deg, hsl(${hue1} 42% 74%), hsl(${hue2} 48% 58%))`,
+  };
+}
+
 function ProductImage({ product }: { product: DiscoveryProduct }) {
   const [loaded, setLoaded] = useState(false);
   const [errored, setErrored] = useState(false);
   const showImage = product.image_url && !errored;
 
   return (
-    <div className="relative flex h-32 items-center justify-center bg-tile text-accent max-md:h-28">
-      <CategoryIcon category={product.category} className="h-11 w-11 opacity-80 max-md:h-9 max-md:w-9" />
+    <div
+      className="relative flex h-32 items-center justify-center overflow-hidden max-md:h-28"
+      style={tileStyle(product.product_id)}
+    >
+      <CategoryIcon
+        category={product.category}
+        className="h-20 w-20 text-white/85 drop-shadow-sm max-md:h-16 max-md:w-16"
+      />
       {showImage && (
         // eslint-disable-next-line @next/next/no-img-element
         <img

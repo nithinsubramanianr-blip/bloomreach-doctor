@@ -20,11 +20,12 @@ export function CategoryIcon({
   switch (category) {
     case "earrings":
       return (
-        <svg {...common} strokeLinecap="round">
-          <path d="M18 12a4 4 0 0 1 8 0c0 5-5 6-5 11" />
-          <circle cx="21" cy="31" r="3.5" />
-          <path d="M30 14a3 3 0 0 1 6 0c0 4-4 5-4 9" />
-          <circle cx="33" cy="29" r="3" />
+        <svg {...common} strokeLinecap="round" strokeLinejoin="round">
+          {/* a clear pair of stud-and-drop earrings */}
+          <circle cx="18" cy="13" r="1.6" />
+          <path d="M18 15c-4 4-4 9 0 12 4-3 4-8 0-12z" />
+          <circle cx="30" cy="13" r="1.6" />
+          <path d="M30 15c-4 4-4 9 0 12 4-3 4-8 0-12z" />
         </svg>
       );
     case "bracelet":

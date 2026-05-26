@@ -1,24 +1,31 @@
 @import "tailwindcss";
 
 /*
- * Personalization Performance Doctor — Kendra Scott demo dashboard.
- * Navy + teal brand palette, editorial headings, minimal mono usage.
+ * Personalization Performance Doctor — BloomBridge demo dashboard.
+ * Professional neutral (navy) + one accent (teal), editorial headings.
+ *
+ * BRAND COLORS — single source of truth. To re-skin (e.g. to confirmed
+ * Bounteous brand hexes), change only --brand-primary / --brand-accent per
+ * theme below; --navy, --accent and the header derive from them.
  */
 :root,
 :root[data-theme="light"] {
+  --brand-primary: #1b3a5c; /* deep navy — headers, labels, primary text */
+  --brand-accent: #0e7c7b; /* teal — CTAs, active tabs, approve */
+
   --bg: #f4f6f9;
   --surface: #ffffff;
   --surface-2: #eef2f6;
   --tile: #e8edf2;
   --border: #dde3ea;
   --border-strong: #c5ced8;
-  --text: #1b3a5c;
+  --text: var(--brand-primary);
   --text-body: #334155;
   --muted: #64748b;
   --faint: #94a3b8;
-  --navy: #1b3a5c;
+  --navy: var(--brand-primary);
   --navy-soft: #2a4a6b;
-  --accent: #0e7c7b;
+  --accent: var(--brand-accent);
   --accent-ink: #ffffff;
   --accent-soft: #e6f4f4;
   --accent-muted: #0e7c7b33;
@@ -26,12 +33,15 @@
   --amber: #f59e0b;
   --green: #16a34a;
   --shadow: 0 1px 2px rgba(27, 58, 92, 0.04), 0 8px 24px -8px rgba(27, 58, 92, 0.1);
-  --header-bg: #1b3a5c;
+  --header-bg: var(--brand-primary);
   --header-text: #ffffff;
   --header-muted: #a8bdd4;
 }
 
 :root[data-theme="dark"] {
+  --brand-primary: #1b3a5c; /* navy retained for brand chips on dark */
+  --brand-accent: #14a3a1; /* brighter teal for contrast on dark */
+
   --bg: #0c1117;
   --surface: #151b24;
   --surface-2: #1c2430;
@@ -42,9 +52,9 @@
   --text-body: #cbd5e1;
   --muted: #94a3b8;
   --faint: #64748b;
-  --navy: #1b3a5c;
+  --navy: var(--brand-primary);
   --navy-soft: #243f5c;
-  --accent: #14a3a1;
+  --accent: var(--brand-accent);
   --accent-ink: #041414;
   --accent-soft: #0e2a2a;
   --accent-muted: #14a3a133;

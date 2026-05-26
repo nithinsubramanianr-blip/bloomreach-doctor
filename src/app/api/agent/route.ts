@@ -1,7 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import type { DemoState } from "@/lib/contracts";
+import type { DemoState, PersonaId } from "@/lib/contracts";
 import { handleQuery } from "@/m3-nl/query-handler";
+
+const VALID_PERSONAS: readonly PersonaId[] = ["guest", "sarah", "alex"];
 
 /**
  * POST /api/agent  body: { query: string, state?: "before" | "after" }
@@ -13,7 +15,7 @@ import { handleQuery } from "@/m3-nl/query-handler";
  * llm-explainer is wired.)
  */
 export async function POST(request: NextRequest) {
-  let body: { query?: unknown; state?: unknown };
+  let body: { query?: unknown; state?: unknown; persona?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -27,6 +29,11 @@ export async function POST(request: NextRequest) {
   }
 
   const state: DemoState = body.state === "after" ? "after" : "before";
-  const response = await handleQuery(query, state);
+  const persona =
+    typeof body.persona === "string" &&
+    VALID_PERSONAS.includes(body.persona as PersonaId)
+      ? (body.persona as PersonaId)
+      : undefined;
+  const response = await handleQuery(query, state, persona);
   return NextResponse.json(response);
 }

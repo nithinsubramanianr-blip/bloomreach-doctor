@@ -157,6 +157,13 @@ export interface FixResult {
 
 export type PersonaId = "guest" | "sarah" | "alex";
 
+/** A single behavioural event in a persona's session history (provenance). */
+export interface PersonaEvent {
+  type: "page_view" | "search" | "wishlist_add" | "purchase";
+  category: string; // product category or search term
+  timestamp: string; // ISO8601
+}
+
 export interface Persona {
   persona_id: PersonaId;
   display_name: string;
@@ -176,6 +183,8 @@ export interface Persona {
   plp_before_state?: string;
   plp_after_state?: string;
   personalisation_gap?: string;
+  /** Behavioural events that justify this persona's segment assignment. */
+  journey?: PersonaEvent[];
 }
 
 export interface Product {

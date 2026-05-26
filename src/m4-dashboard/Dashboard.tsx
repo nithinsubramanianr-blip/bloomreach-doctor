@@ -3,19 +3,15 @@
 import Link from "next/link";
 import { useState } from "react";
 
-import type {
-  DiscoveryProduct,
-  FixResult,
-  PRSState,
-  Persona,
-} from "@/lib/contracts";
+import type { FixResult, PRSState } from "@/lib/contracts";
+import { BRAND } from "@/lib/brand";
+import { setRulesActiveCookie } from "@/lib/rules-flag";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { ApprovalModal } from "./components/ApprovalModal";
 import { NLChat } from "./modules/NLChat";
 import { PRSScorecard } from "./modules/PRSScorecard";
-import { ShopperSimulator } from "./modules/ShopperSimulator";
 
-type Tab = "scorecard" | "simulator" | "doctor";
+type Tab = "scorecard" | "doctor";
 
 interface ApprovedAction {
   fix_id: string;
@@ -23,25 +19,16 @@ interface ApprovedAction {
   status: "pending_team_review";
 }
 
-const TABS: { id: Tab; label: string; shortLabel: string }[] = [
-  { id: "scorecard", label: "Scorecard", shortLabel: "Score" },
-  { id: "simulator", label: "Shopper simulator", shortLabel: "Simulator" },
-  { id: "doctor", label: "Ask the doctor", shortLabel: "Doctor" },
-];
+const NAV_ITEM =
+  "min-w-0 flex-1 rounded-lg px-1 py-2 text-center text-[11px] font-medium transition-colors md:flex-none md:shrink-0 md:rounded-full md:px-4 md:py-1.5 md:text-[13px]";
+const NAV_ACTIVE = "bg-accent text-accent-ink shadow-sm";
+const NAV_INACTIVE = "text-header-muted hover:text-header-text";
 
 interface DashboardProps {
   initialPRS: PRSState;
-  personas: Persona[];
-  initialBefore: DiscoveryProduct[];
-  initialAfter: DiscoveryProduct[];
 }
 
-export function Dashboard({
-  initialPRS,
-  personas,
-  initialBefore,
-  initialAfter,
-}: DashboardProps) {
+export function Dashboard({ initialPRS }: DashboardProps) {
   const [activeTab, setActiveTab] = useState<Tab>("scorecard");
   const [prsState, setPrsState] = useState<PRSState>(initialPRS);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -79,6 +66,9 @@ export function Dashboard({
         status: "pending_team_review",
       },
     ]);
+    // Approving a fix activates personalisation: the Live PLP reflects this on
+    // its next load (single source of truth — the rulesActive cookie flag).
+    setRulesActiveCookie(true);
   }
 
   return (
@@ -88,19 +78,13 @@ export function Dashboard({
           <div className="flex items-start justify-between gap-3 md:min-w-0 md:flex-1">
             <div className="min-w-0">
               <p className="text-[10px] font-medium uppercase tracking-[0.1em] text-header-muted md:text-[11px] md:tracking-[0.12em]">
-                Kendra Scott · Bloomreach Discovery
+                {BRAND.store} · Bloomreach Discovery
               </p>
               <h1 className="mt-0.5 text-lg font-semibold leading-tight text-header-text md:text-[22px] md:font-medium">
                 Personalization Performance Doctor
               </h1>
             </div>
             <div className="flex shrink-0 items-center gap-2 md:hidden">
-              <Link
-                href="/plp"
-                className="flex items-center rounded-lg border border-white/15 px-2.5 py-2 text-[11px] leading-none text-header-muted transition-colors hover:border-white/30 hover:text-header-text"
-              >
-                PLP
-              </Link>
               <ThemeToggle variant="header" />
             </div>
           </div>
@@ -111,28 +95,30 @@ export function Dashboard({
                 className="flex w-full gap-1 rounded-xl border border-white/10 bg-white/5 p-1 md:w-auto md:rounded-full"
                 aria-label="Dashboard modules"
               >
-                {TABS.map((tab) => (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`min-w-0 flex-1 rounded-lg px-1 py-2 text-center text-[11px] font-medium transition-colors md:flex-none md:shrink-0 md:rounded-full md:px-4 md:py-1.5 md:text-[13px] ${
-                      activeTab === tab.id
-                        ? "bg-accent text-accent-ink shadow-sm"
-                        : "text-header-muted hover:text-header-text"
-                    }`}
-                  >
-                    <span className="md:hidden">{tab.shortLabel}</span>
-                    <span className="hidden md:inline">{tab.label}</span>
-                  </button>
-                ))}
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("scorecard")}
+                  className={`${NAV_ITEM} ${activeTab === "scorecard" ? NAV_ACTIVE : NAV_INACTIVE}`}
+                >
+                  <span className="md:hidden">Score</span>
+                  <span className="hidden md:inline">Scorecard</span>
+                </button>
+                <Link
+                  href="/plp"
+                  className={`${NAV_ITEM} ${NAV_INACTIVE} flex items-center justify-center`}
+                >
+                  <span className="md:hidden">PLP</span>
+                  <span className="hidden md:inline">Live PLP</span>
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("doctor")}
+                  className={`${NAV_ITEM} ${activeTab === "doctor" ? NAV_ACTIVE : NAV_INACTIVE}`}
+                >
+                  <span className="md:hidden">Doctor</span>
+                  <span className="hidden md:inline">Ask the doctor</span>
+                </button>
               </nav>
-              <Link
-                href="/plp"
-                className="hidden shrink-0 items-center rounded-full border border-white/15 px-3 py-1.5 text-[12px] leading-none text-header-muted transition-colors hover:border-white/30 hover:text-header-text md:flex"
-              >
-                Live PLP
-              </Link>
               <ThemeToggle variant="header" className="hidden md:flex" />
             </div>
           </div>
@@ -146,13 +132,6 @@ export function Dashboard({
             onReviewFix={reviewFix}
             onToggleBoostRules={toggleBoostRules}
             isRefreshing={isRefreshing}
-          />
-        )}
-        {activeTab === "simulator" && (
-          <ShopperSimulator
-            personas={personas}
-            initialBefore={initialBefore}
-            initialAfter={initialAfter}
           />
         )}
         {activeTab === "doctor" && <NLChat />}

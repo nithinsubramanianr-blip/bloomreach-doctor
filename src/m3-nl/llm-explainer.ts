@@ -58,21 +58,26 @@ const FETCHERS = {
 
 type FetcherName = keyof typeof FETCHERS;
 
-const system = (prs: PRSState) =>
+const system = (prs: PRSState, personaContext?: string) =>
   `You are the Personalization Performance Doctor for a Bloomreach Discovery storefront.
 Use the tools to inspect the dimensions relevant to the question, then explain the diagnosis in plain English.
 GROUND TRUTH — do not recompute or contradict:
 - Composite score ${prs.composite_score}/100 (${prs.rag_status}).
 - Ranked fixes: ${prs.fix_list
     .map((f, i) => `${i + 1}. ${f.fix_title} (${f.revenue_impact})`)
-    .join("; ")}.
+    .join("; ")}.${
+    personaContext
+      ? `\nACTIVE SHOPPER CONTEXT — when explaining a segment, cite these specific events:\n${personaContext}`
+      : ""
+  }
 After using tools, reply with ONLY this JSON, no prose:
 {"summary_sentence":string,"score_breakdown":string,"top_3_fixes":string[],"suggested_next_action":string}`;
 
 export async function explainWithClaude(
   query: string,
   state: DemoState,
-  prs: PRSState
+  prs: PRSState,
+  personaContext?: string
 ): Promise<{ trace: ReasoningTraceStep[]; llm_response: AgentResponse["llm_response"] }> {
   const baseURL = serverEnv.anthropicBaseUrl();
   const client = new Anthropic({
@@ -87,7 +92,7 @@ export async function explainWithClaude(
     const res = await client.messages.create({
       model: serverEnv.claudeModel(),
       max_tokens: 1024,
-      system: system(prs),
+      system: system(prs, personaContext),
       tools: TOOLS,
       tool_choice: { type: "auto" },
       messages,

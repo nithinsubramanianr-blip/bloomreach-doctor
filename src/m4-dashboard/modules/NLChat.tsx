@@ -64,11 +64,19 @@ const PRE_LOADED_EXCHANGE: AgentResponse = {
   timestamp: "2026-05-22T00:00:00Z",
 };
 
+const PERSONA_OPTIONS = [
+  { value: "", label: "All shoppers" },
+  { value: "guest", label: "Guest" },
+  { value: "sarah", label: "Sarah" },
+  { value: "alex", label: "Alex" },
+];
+
 export function NLChat() {
   const [exchanges, setExchanges] = useState<AgentResponse[]>([
     PRE_LOADED_EXCHANGE,
   ]);
   const [input, setInput] = useState("");
+  const [persona, setPersona] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -82,7 +90,10 @@ export function NLChat() {
       const res = await fetch("/api/agent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: trimmed }),
+        body: JSON.stringify({
+          query: trimmed,
+          ...(persona ? { persona } : {}),
+        }),
       });
       if (!res.ok) throw new Error(`Agent error: ${res.status}`);
       const data = (await res.json()) as AgentResponse;
@@ -126,6 +137,21 @@ export function NLChat() {
             ask(input);
           }}
         >
+          <label className="flex items-center gap-2 rounded-xl border border-border bg-bg px-3 text-[12px] text-muted max-md:py-1">
+            <span className="hidden sm:inline">Ask as</span>
+            <select
+              aria-label="Ask as shopper"
+              value={persona}
+              onChange={(e) => setPersona(e.target.value)}
+              className="bg-transparent py-3 text-sm font-medium text-text-body focus:outline-none max-md:py-2"
+            >
+              {PERSONA_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value} className="text-text">
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </label>
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}

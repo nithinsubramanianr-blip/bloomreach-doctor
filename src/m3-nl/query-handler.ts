@@ -4,15 +4,31 @@ import type {
   AgentResponse,
   DemoState,
   DimensionId,
+  PersonaId,
   PRSState,
   ReasoningTraceStep,
   ScoredDimension,
 } from "@/lib/contracts";
 import { serverEnv } from "@/lib/env";
 import { fetchAllDimensions } from "@/m1-bloomreach/prs-data-fetcher";
+import { loadPersonas } from "@/m1-bloomreach/synthetic-loader";
 import { generateFixList } from "@/m2-scoring/fix-generator";
 import { calculatePRS } from "@/m2-scoring/prs-calculator";
 import { explainWithClaude } from "./llm-explainer";
+
+/** Builds the active-shopper context string the Doctor can cite (FR step 5). */
+async function buildPersonaContext(
+  personaId: PersonaId
+): Promise<string | undefined> {
+  const persona = (await loadPersonas()).find((p) => p.persona_id === personaId);
+  if (!persona) return undefined;
+  const events = (persona.journey ?? [])
+    .map((e) => `${e.type} (${e.category}) on ${e.timestamp}`)
+    .join("; ");
+  return `${persona.display_name} — segment "${persona.segment_name}". Recent events: ${
+    events || "none recorded"
+  }.`;
+}
 
 /**
  * M3 entry point — the sole public API of the NL interface (FR-004-1).
@@ -127,7 +143,8 @@ function composeAnswer(
  */
 export async function handleQuery(
   queryText: string,
-  state: DemoState = "before"
+  state: DemoState = "before",
+  personaId?: PersonaId
 ): Promise<AgentResponse> {
   const intent = classifyIntent(queryText);
 
@@ -141,10 +158,14 @@ export async function handleQuery(
   // through to the deterministic path below — the route never 500s.
   if (serverEnv.anthropicApiKey()) {
     try {
+      const personaContext = personaId
+        ? await buildPersonaContext(personaId)
+        : undefined;
       const { trace, llm_response } = await explainWithClaude(
         queryText,
         state,
-        prs
+        prs,
+        personaContext
       );
       return {
         query: queryText,
