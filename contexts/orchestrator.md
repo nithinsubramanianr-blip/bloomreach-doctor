@@ -71,7 +71,8 @@ Report: test results, CLAUDE.md changes.
 
 ## Open Issues — Flag Before Proceeding
 
-1. **Sandbox credentials:** Not yet received. All M1 clients fall back to synthetic until credentials arrive via #sandbox-support.
+Resolved (no longer blocking):
+- ~~**Sandbox credentials:** Not yet received. All M1 clients fall back to synthetic until credentials arrive via #sandbox-support.~~ — **Resolved 2026-05-27. Credentials confirmed available. M1 clients can now be tested against live Bloomreach endpoints.**
 
 Resolved (no longer blocking):
 - ~~Post-fix arithmetic: confirmed 70/100. ABTest improves 6→16 (A/B tests configured for boost rules). 8+16+14+16+16=70 ✓~~
