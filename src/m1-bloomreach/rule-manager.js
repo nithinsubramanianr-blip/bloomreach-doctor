@@ -23,8 +23,7 @@ function logFallback(reason) {
 }
 
 function syntheticState() {
-  const env = (typeof process !== 'undefined' && process.env) ? process.env : {};
-  const allActive = env.DEMO_STATE === 'post_fix';
+  const allActive = process.env.DEMO_STATE === 'post_fix';
   const status = allActive ? 'active' : 'inactive';
   return {
     rule_1_gifting: status,

@@ -97,20 +97,87 @@ async function searchProducts(query, bruid) {
 }
 
 // ---------------------------------------------------------------------------
-// Live API helpers (stubbed — synthetic fallback is the only tested path in
-// this build because sandbox credentials are not available).
+// Live API helpers
 // ---------------------------------------------------------------------------
 
 async function callLiveBRUID() {
+  // Discovery REST API for BRUID match rate — credentials not yet configured.
   throw new Error('live Discovery not configured — sandbox credentials unavailable');
 }
 
 async function callLiveRuleConflicts() {
+  // Discovery REST API for rule conflict analysis — credentials not yet configured.
   throw new Error('live Discovery not configured — sandbox credentials unavailable');
 }
 
-async function callLiveSearch(/* query, bruid */) {
-  throw new Error('live Discovery not configured — sandbox credentials unavailable');
+async function callLiveSearch(query, bruid) {
+  const base = process.env.BLOOMREACH_ENGAGEMENT_BASE_URL;
+  const projectId = process.env.BLOOMREACH_PROJECT_ID;
+  const catalogId = process.env.BLOOMREACH_CATALOG_ID;
+  const apiKey = process.env.BLOOMREACH_ENGAGEMENT_API_KEY;
+
+  if (!base || !projectId || !catalogId || !apiKey) {
+    throw new Error(
+      'live search: BLOOMREACH_ENGAGEMENT_BASE_URL, BLOOMREACH_PROJECT_ID, '
+      + 'BLOOMREACH_CATALOG_ID, BLOOMREACH_ENGAGEMENT_API_KEY required',
+    );
+  }
+
+  const url = `${base}/api/v2/catalogs/${encodeURIComponent(catalogId)}/items`
+    + `?company_id=${encodeURIComponent(projectId)}`
+    + `&query=${encodeURIComponent(query)}`
+    + '&count=50';
+
+  const controller = new AbortController();
+  const tid = setTimeout(() => controller.abort(), LIVE_TIMEOUT_MS);
+
+  let data;
+  try {
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      signal: controller.signal,
+    });
+    clearTimeout(tid);
+    if (!res.ok) throw new Error(`catalog API ${res.status}`);
+    data = await res.json();
+  } catch (err) {
+    clearTimeout(tid);
+    throw err;
+  }
+
+  const items = data.data || [];
+  if (items.length === 0) throw new Error('empty catalog response');
+
+  const products = items.map((item) => ({
+    product_id: item._id,
+    name: item.properties.name,
+    price: item.properties.price,
+    currency: item.properties.currency,
+    category: item.properties.category,
+    description: item.properties.description || '',
+    gift_eligible: !!item.properties.gift_eligible,
+    is_bestseller: !!item.properties.is_bestseller,
+    is_new_arrival: !!item.properties.is_new_arrival,
+    price_band: item.properties.price_band,
+    review_count: item.properties.review_count || 0,
+    image_url: item.properties.image_url || '',
+  }));
+
+  const persona = personaSlugFromBruid(bruid);
+  const state = demoState();
+  const ranked = applyDemoBoost(products, persona, state);
+
+  return {
+    query,
+    total: ranked.length,
+    products: ranked.map((p, idx) => ({
+      ...p,
+      rank_position: idx + 1,
+      is_personalised: state === 'after' && persona !== 'guest',
+    })),
+    cached: false,
+    cache_key: `${persona}-${state}`,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -125,8 +192,7 @@ function personaSlugFromBruid(bruid) {
 }
 
 function demoState() {
-  const env = (typeof process !== 'undefined' && process.env) ? process.env : {};
-  return env.DEMO_STATE === 'post_fix' ? 'after' : 'before';
+  return process.env.DEMO_STATE === 'post_fix' ? 'after' : 'before';
 }
 
 function buildSyntheticSearchResult(query, bruid) {

@@ -342,7 +342,7 @@ Wait for my approval before doing anything.
 6. **Module C uses Claude native tool use** — `tool_choice: auto`. Claude decides which tools to call.
 7. **Module B is live** — it calls Discovery search API. Never revert to static mockup.
 8. **ApprovalModal = NO API write** — application state only.
-9. **Currency is GBP throughout** — no USD in product data.
+9. **Currency is GBP throughout (synthetic path)** — `data/products.json` uses GBP. The live Loomi catalog (`bounteous_fashion_jewellery_product`, ID `6a15f5a63dede3049f806165`) stores prices in USD; `callLiveSearch()` passes through USD as-is. Synthetic fallback always returns GBP.
 10. **Three personas only** — Guest, Sarah, Alex. No fourth persona.
 11. **Demo query is "necklace" for all three personas** — hardcoded.
 12. **No real Kendra Scott product data** — all 50 products are generic jewellery.
@@ -402,7 +402,8 @@ feature/react-app   (current — unified Vite app hosting M4 + M5)
 
 ## TODOs (known gaps)
 
-- Bloomreach sandbox credentials not yet received — all clients fall back to synthetic
+- M1 live stubs implemented for: catalog search, A/B experiments, segmentations, signal freshness, autosegments. Set `DATA_SOURCE=live` + three new env vars to activate.
+- M1 BRUID match rate and rule conflict clients still synthetic-only — Discovery REST API credentials not yet configured.
 - Architecture, design, implementation, testing specs not yet written (awaiting requirements approval)
 - Old spec folders (001-readiness-dashboard, 002-shopper-simulator, 003-agent-diagnosis, 002-mcp-integration) are superseded
 
@@ -422,9 +423,12 @@ npm run test:e2e     # Integration test (full demo flow)
 | Variable | Required | Default | Notes |
 |---|---|---|---|
 | `BLOOMREACH_DISCOVERY_API_KEY` | Yes (M1) | — | Discovery REST API auth |
-| `BLOOMREACH_ENGAGEMENT_API_KEY` | Yes (M1) | — | Engagement API auth |
-| `BLOOMREACH_MCP_MARKETING_URL` | No | — | Marketing MCP endpoint |
-| `BLOOMREACH_MCP_ANALYTICS_URL` | No | — | Analytics MCP endpoint |
+| `BLOOMREACH_ENGAGEMENT_API_KEY` | Yes (M1) | — | Bearer token from Loomi MCP session (`whoami.access_token`) |
+| `BLOOMREACH_ENGAGEMENT_BASE_URL` | Yes (M1 live) | `https://uqa.app.exponea.dev` | Engagement REST API base URL |
+| `BLOOMREACH_PROJECT_ID` | Yes (M1 live) | `99373aee-5469-11f1-9fdb-862b79b06b65` | Engagement project UUID (wobbly-donkey sandbox) |
+| `BLOOMREACH_CATALOG_ID` | Yes (M1 live search) | `6a15f5a63dede3049f806165` | Loomi catalog ID for live product search |
+| `BLOOMREACH_MCP_MARKETING_URL` | No | — | Legacy placeholder — superseded by `BLOOMREACH_ENGAGEMENT_BASE_URL` |
+| `BLOOMREACH_MCP_ANALYTICS_URL` | No | — | Legacy placeholder — superseded by `BLOOMREACH_ENGAGEMENT_BASE_URL` |
 | `ANTHROPIC_API_KEY` | Yes (M3) | — | Claude API — Module C |
 | `VITE_DISCOVERY_ENDPOINT` | Yes (M5) | — | Discovery search endpoint for PLP. Must be `VITE_` prefixed to be exposed by Vite to client code. |
 | `DATA_SOURCE` | No | `synthetic` | `synthetic` or `live` |

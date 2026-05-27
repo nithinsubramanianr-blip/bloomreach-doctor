@@ -35,8 +35,7 @@ const CACHED_RESULTS = {
 
 function selectedState() {
   if (_runtimeState) return _runtimeState;
-  const env = (typeof process !== 'undefined' && process.env) ? process.env : {};
-  return env.DEMO_STATE === 'post_fix' ? 'post_fix' : 'pre_fix';
+  return process.env.DEMO_STATE === 'post_fix' ? 'post_fix' : 'pre_fix';
 }
 
 function loadSyntheticDimension(dimensionId) {
@@ -59,8 +58,7 @@ function loadCachedSearchResult(cacheKey) {
 }
 
 function isLiveMode() {
-  const env = (typeof process !== 'undefined' && process.env) ? process.env : {};
-  return env.DATA_SOURCE === 'live';
+  return process.env.DATA_SOURCE === 'live';
 }
 
 module.exports = {

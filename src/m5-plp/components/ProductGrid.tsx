@@ -13,7 +13,7 @@ import type { DiscoveryProduct } from '../lib/resultCache';
 
 interface ProductGridProps {
   products: DiscoveryProduct[] | null;
-  displayState: 'before' | 'after';
+  displayState?: 'before' | 'after';
 }
 
 const SKELETON_COUNT = 8;
@@ -30,7 +30,7 @@ function SkeletonCard({ index }: { index: number }) {
 
 export default function ProductGrid({
   products,
-  displayState,
+  displayState = 'after',
 }: ProductGridProps) {
   if (products === null || products.length === 0) {
     if (products && products.length === 0) {

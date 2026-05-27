@@ -2,10 +2,12 @@
  * PRSScorecard.tsx — Module A
  *
  * Displays:
- *   - Two-column header: ScoreDial (left) + score/RAG/boost callout (right)
- *   - PRS Dimensions section with source legend, taller bars, raw_value %
- *   - Top Fixes section with larger rank badges and left border by status
- *   - "Activate Boost Rules" button that triggers pre→post-fix transition
+ *   - Hero section: ScoreDial + score/RAG/refresh button
+ *   - PRS Dimensions section with source legend, status bars
+ *   - Top Fixes section with rank badges and RPV lift
+ *
+ * Boost callout removed — user activates rules in Bloomreach directly,
+ * then clicks "Refresh Score" to re-pull live data.
  */
 
 import React from 'react';
@@ -37,19 +39,15 @@ export interface PRSState {
 export interface PRSScorecardProps {
   prsState: PRSState;
   onReviewFix: (fix: FixResult) => void;
-  onActivateBoostRules?: () => void;
-  isBoostActive?: boolean;
+  onRefreshScore?: () => void;
+  isRefreshing?: boolean;
 }
 
 // --------------------------------------------------------------------------
-// RAG colour helper
+// Design tokens (mirrors CLAUDE.md palette)
 // --------------------------------------------------------------------------
 
 const RAG_COLOUR = { red: '#DC2626', amber: '#F59E0B', green: '#16A34A' };
-
-// --------------------------------------------------------------------------
-// Source label mapping (design-spec § "DimensionRow source label mapping")
-// --------------------------------------------------------------------------
 
 const SOURCE_LABELS: Record<string, string> = {
   discovery_api:  'Discovery API',
@@ -57,7 +55,6 @@ const SOURCE_LABELS: Record<string, string> = {
   analytics_mcp:  'Analytics MCP',
 };
 
-// Dimension display names for cases where dimension_name is absent.
 const DIM_DISPLAY: Record<string, string> = {
   bruid_match_rate:      'BRUID Match Rate',
   autosegment_coverage:  'AutoSegment Coverage',
@@ -66,84 +63,133 @@ const DIM_DISPLAY: Record<string, string> = {
   ab_test_coverage:      'A/B Test Coverage',
 };
 
-// --------------------------------------------------------------------------
-// Status badge colours
-// --------------------------------------------------------------------------
-
-const STATUS_CLASSES: Record<string, string> = {
-  critical: 'bg-red-100 text-red-700',
-  warning:  'bg-amber-100 text-amber-700',
-  healthy:  'bg-green-100 text-green-700',
+const DIM_DESCRIPTION: Record<string, string> = {
+  bruid_match_rate:      'Visitor recognition across sessions',
+  autosegment_coverage:  'Audience segments with active rules',
+  signal_freshness:      'Recency of behavioural signals',
+  rule_conflicts:        'Boost rules free of conflicts',
+  ab_test_coverage:      'Search experiments configured',
 };
 
-// Left-border accent colour by status
-const STATUS_BORDER_COLOUR: Record<string, string> = {
+const STATUS_PILL: Record<string, string> = {
+  critical: 'bg-red-50 text-red-700 ring-1 ring-red-200',
+  warning:  'bg-amber-50 text-amber-700 ring-1 ring-amber-200',
+  healthy:  'bg-green-50 text-green-700 ring-1 ring-green-200',
+};
+
+const STATUS_DOT: Record<string, string> = {
   critical: '#DC2626',
   warning:  '#F59E0B',
   healthy:  '#16A34A',
 };
 
+const STATUS_BAR: Record<string, string> = {
+  critical: '#DC2626',
+  warning:  '#F59E0B',
+  healthy:  '#16A34A',
+};
+
+// Fix card left-border accent per rank
+const FIX_BORDER: Record<number, string> = {
+  1: '#0E7C7B',
+  2: '#F59E0B',
+  3: '#94A3B8',
+};
+
 // --------------------------------------------------------------------------
-// DimensionRow (internal)
+// RefreshIcon — SVG sync icon
+// --------------------------------------------------------------------------
+
+function RefreshIcon({ spinning }: { spinning: boolean }) {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={spinning ? 'animate-spin' : ''}
+      aria-hidden="true"
+    >
+      <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+      <path d="M21 3v5h-5" />
+      <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+      <path d="M8 16H3v5" />
+    </svg>
+  );
+}
+
+// --------------------------------------------------------------------------
+// DimensionRow
 // --------------------------------------------------------------------------
 
 function DimensionRow({ dim }: { dim: DimensionResult }) {
   const displayName =
     dim.dimension_name ?? DIM_DISPLAY[dim.dimension_id] ?? dim.dimension_id;
-  const sourceLabel =
-    SOURCE_LABELS[dim.data_source ?? ''] ?? dim.data_source ?? '—';
+  const description = DIM_DESCRIPTION[dim.dimension_id] ?? '';
+  const sourceLabel = SOURCE_LABELS[dim.data_source ?? ''] ?? dim.data_source ?? '—';
   const score = dim.normalised_score ?? dim.score;
   const pct = Math.round((score / 20) * 100);
-  const badgeClass = STATUS_CLASSES[dim.status] ?? STATUS_CLASSES.warning;
+  const pillClass = STATUS_PILL[dim.status] ?? STATUS_PILL.warning;
+  const dotColour = STATUS_DOT[dim.status] ?? '#F59E0B';
+  const barColour = STATUS_BAR[dim.status] ?? '#F59E0B';
 
-  const barColour =
-    dim.status === 'critical'
-      ? '#DC2626'
-      : dim.status === 'warning'
-        ? '#F59E0B'
-        : '#16A34A';
-
-  // Format raw_value as percentage string when available
   const rawPctLabel =
     dim.raw_value !== undefined && dim.raw_value !== null
-      ? `(${Math.round(dim.raw_value * 100)}%)`
+      ? `${Math.round(dim.raw_value * 100)}%`
       : null;
 
   return (
     <div
-      className="flex items-center gap-4 py-3 border-b border-slate-100 last:border-0"
+      className="group flex items-center gap-4 py-3.5 border-b border-slate-100 last:border-0 hover:bg-slate-50/60 transition-colors px-1 -mx-1 rounded-lg"
       data-testid={`dimension-row-${dim.dimension_id}`}
     >
-      {/* Name + source */}
-      <div className="w-44 flex-shrink-0">
-        <p className="text-sm font-medium text-slate-800">{displayName}</p>
-        <p className="text-xs text-slate-400">{sourceLabel}</p>
+      {/* Status dot */}
+      <div className="flex-shrink-0 mt-0.5">
+        <div
+          className="h-2.5 w-2.5 rounded-full"
+          style={{ backgroundColor: dotColour }}
+          aria-hidden="true"
+        />
       </div>
 
-      {/* Score bar */}
+      {/* Name + meta */}
+      <div className="w-44 flex-shrink-0">
+        <p className="text-sm font-semibold text-slate-800 leading-tight">{displayName}</p>
+        {description && (
+          <p className="text-xs text-slate-400 mt-0.5 leading-tight">{description}</p>
+        )}
+        <p className="text-xs text-slate-300 mt-0.5">{sourceLabel}</p>
+      </div>
+
+      {/* Progress bar track */}
       <div className="flex-1">
-        <div className="h-2.5 w-full rounded-full bg-slate-100">
+        <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
           <div
-            className="h-2.5 rounded-full transition-all duration-500"
+            className="h-2 rounded-full transition-all duration-700"
             style={{ width: `${pct}%`, backgroundColor: barColour }}
           />
         </div>
       </div>
 
-      {/* Score number + raw % */}
-      <div className="w-24 text-right">
-        <span className="text-sm font-semibold text-slate-700">
-          {score}<span className="font-normal text-slate-400">/20</span>
+      {/* Score + raw % */}
+      <div className="w-28 text-right flex-shrink-0">
+        <span className="text-sm font-bold text-slate-700">
+          {score}
+          <span className="font-normal text-slate-300">/20</span>
         </span>
         {rawPctLabel && (
-          <span className="ml-1 text-xs text-slate-400">{rawPctLabel}</span>
+          <span className="ml-1.5 text-xs text-slate-400">({rawPctLabel})</span>
         )}
       </div>
 
-      {/* Status badge */}
-      <div className="w-20 flex-shrink-0">
+      {/* Status pill */}
+      <div className="w-20 flex-shrink-0 flex justify-end">
         <span
-          className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium capitalize ${badgeClass}`}
+          className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${pillClass}`}
         >
           {dim.status}
         </span>
@@ -153,130 +199,217 @@ function DimensionRow({ dim }: { dim: DimensionResult }) {
 }
 
 // --------------------------------------------------------------------------
-// FixCard (internal)
+// FixCard
 // --------------------------------------------------------------------------
 
-function FixCard({
-  fix,
-  onReview,
-}: {
-  fix: FixResult;
-  onReview: (fix: FixResult) => void;
-}) {
-  const rankLabel = fix.position === 1 ? '1st' : fix.position === 2 ? '2nd' : '3rd';
-
-  // Derive a status-like colour for the left border from RPV lift magnitude
-  // Rank 1 = teal accent, 2 = amber, 3 = slate
-  const leftBorderColour =
-    fix.position === 1
-      ? '#0E7C7B'
-      : fix.position === 2
-        ? '#F59E0B'
-        : '#94A3B8';
+function FixCard({ fix, onReview }: { fix: FixResult; onReview: (fix: FixResult) => void }) {
+  const borderColour = FIX_BORDER[fix.position ?? 3] ?? '#94A3B8';
+  const rankLabel = fix.position === 1 ? '1st Priority' : fix.position === 2 ? '2nd Priority' : '3rd Priority';
 
   return (
     <div
-      className="flex items-start gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm overflow-hidden"
-      style={{ borderLeftWidth: '4px', borderLeftColor: leftBorderColour }}
+      className="flex items-start gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:shadow-md transition-shadow overflow-hidden"
+      style={{ borderLeftWidth: '4px', borderLeftColor: borderColour }}
       data-testid={`fix-card-${fix.fix_id}`}
     >
-      {/* Rank badge — larger */}
+      {/* Rank badge */}
       <div
-        className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-base font-bold text-white"
+        className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-base font-bold text-white shadow-sm"
         style={{ backgroundColor: '#1B3A5C' }}
-        aria-label={`Rank ${rankLabel}`}
+        aria-label={rankLabel}
       >
         {fix.position}
       </div>
 
       {/* Content */}
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-slate-800">{fix.fix_title}</p>
-        <p className="mt-0.5 text-xs text-slate-500 line-clamp-2">{fix.description}</p>
-        <div className="mt-2 flex items-center gap-3">
+        <div className="flex items-start justify-between gap-2">
+          <p className="text-sm font-semibold text-slate-800 leading-snug">{fix.fix_title}</p>
           <span
-            className="text-xs font-semibold"
-            style={{ color: '#0E7C7B' }}
+            className="flex-shrink-0 rounded-full px-2 py-0.5 text-xs font-bold whitespace-nowrap"
+            style={{ backgroundColor: '#0E7C7B15', color: '#0E7C7B' }}
           >
-            {fix.estimated_rpv_lift_pct_min}–{fix.estimated_rpv_lift_pct_max}% RPV lift
+            +{fix.estimated_rpv_lift_pct_min}–{fix.estimated_rpv_lift_pct_max}% RPV
           </span>
-          <span className="text-xs text-slate-400">•</span>
-          <span className="text-xs text-slate-500">Effort: {fix.effort}</span>
+        </div>
+        <p className="mt-1 text-xs text-slate-500 line-clamp-2 leading-relaxed">{fix.description}</p>
+        <div className="mt-2 flex items-center gap-2">
+          <span className="inline-flex items-center gap-1 text-xs text-slate-400">
+            <span>⏱</span> Effort: {fix.effort}
+          </span>
+          {fix.risk_level && (
+            <>
+              <span className="text-slate-200">•</span>
+              <span className="text-xs text-slate-400 capitalize">Risk: {fix.risk_level}</span>
+            </>
+          )}
         </div>
       </div>
 
-      {/* Review button */}
+      {/* Review CTA */}
       <button
         onClick={() => onReview(fix)}
         data-testid={`review-button-${fix.fix_id}`}
-        className="flex-shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold text-white focus:outline-none focus:ring-2 focus:ring-offset-1 transition-colors hover:opacity-90"
+        className="flex-shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-1 transition-opacity"
         style={{ backgroundColor: '#0E7C7B' }}
         aria-label={`Review fix: ${fix.fix_title}`}
       >
-        Review
+        Review →
       </button>
     </div>
   );
 }
 
 // --------------------------------------------------------------------------
-// Skeleton loading state
+// Skeleton states
 // --------------------------------------------------------------------------
 
 function SkeletonDimRow() {
   return (
-    <div className="flex items-center gap-4 py-3 border-b border-slate-100 animate-pulse">
-      <div className="w-44 space-y-1">
-        <div className="h-3 bg-slate-200 rounded w-32" />
+    <div className="flex items-center gap-4 py-3.5 border-b border-slate-100 animate-pulse">
+      <div className="h-2.5 w-2.5 rounded-full bg-slate-200 flex-shrink-0" />
+      <div className="w-44 space-y-1.5">
+        <div className="h-3 bg-slate-200 rounded w-28" />
         <div className="h-2 bg-slate-100 rounded w-20" />
       </div>
-      <div className="flex-1 h-2.5 bg-slate-200 rounded-full" />
-      <div className="w-24 h-3 bg-slate-200 rounded" />
+      <div className="flex-1 h-2 bg-slate-200 rounded-full" />
+      <div className="w-28 h-3 bg-slate-200 rounded" />
       <div className="w-20 h-5 bg-slate-100 rounded-full" />
     </div>
   );
 }
 
+function SkeletonFixCard() {
+  return (
+    <div className="flex items-start gap-4 rounded-xl border border-slate-100 bg-white p-4 animate-pulse">
+      <div className="h-10 w-10 rounded-full bg-slate-200 flex-shrink-0" />
+      <div className="flex-1 space-y-2">
+        <div className="h-3.5 bg-slate-200 rounded w-3/4" />
+        <div className="h-2.5 bg-slate-100 rounded w-full" />
+        <div className="h-2 bg-slate-100 rounded w-1/3" />
+      </div>
+      <div className="h-7 w-16 bg-slate-100 rounded-lg flex-shrink-0" />
+    </div>
+  );
+}
+
 // --------------------------------------------------------------------------
-// BoostCallout (internal)
+// ScoreHero — summary header card
 // --------------------------------------------------------------------------
 
-function BoostCallout({
-  isBoostActive,
-  onActivate,
+function ScoreHero({
+  score,
+  ragStatus,
+  formattedDate,
+  criticalCount,
+  warningCount,
+  onRefresh,
+  isRefreshing,
 }: {
-  isBoostActive: boolean;
-  onActivate?: () => void;
+  score: number;
+  ragStatus: 'red' | 'amber' | 'green';
+  formattedDate: string;
+  criticalCount: number;
+  warningCount: number;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
 }) {
-  if (isBoostActive) {
-    return (
-      <div className="rounded-xl border border-green-200 bg-green-50 p-4">
-        <p className="text-sm font-semibold text-green-800">
-          ✓ Boost Rules Active
-        </p>
-        <p className="mt-1 text-xs text-green-700">
-          All 3 rules are live — personalisation is now serving your audience segments.
-        </p>
-      </div>
-    );
-  }
+  const ragColour = RAG_COLOUR[ragStatus] ?? RAG_COLOUR.amber;
+  const ragBadgeClass =
+    ragStatus === 'red'
+      ? 'bg-red-100 text-red-700 ring-1 ring-red-200'
+      : ragStatus === 'green'
+        ? 'bg-green-100 text-green-700 ring-1 ring-green-200'
+        : 'bg-amber-100 text-amber-700 ring-1 ring-amber-200';
+
+  const healthSummary =
+    criticalCount > 0
+      ? `${criticalCount} critical dimension${criticalCount !== 1 ? 's' : ''} need attention`
+      : warningCount > 0
+        ? `${warningCount} dimension${warningCount !== 1 ? 's' : ''} need monitoring`
+        : 'All dimensions healthy';
+
+  const healthSummaryColour =
+    criticalCount > 0 ? '#DC2626' : warningCount > 0 ? '#D97706' : '#16A34A';
 
   return (
-    <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-      <p className="text-sm font-semibold text-amber-800">
-        ⚡ 3 boost rules are INACTIVE
-      </p>
-      <p className="mt-1 text-xs text-amber-700 mb-3">
-        Activate them to serve personalised results to your audience segments and lift your PRS score.
-      </p>
-      <button
-        onClick={onActivate}
-        data-testid="activate-boost-rules-button"
-        className="rounded-lg px-4 py-2 text-xs font-semibold text-white focus:outline-none focus:ring-2 focus:ring-offset-1 transition-colors hover:opacity-90"
-        style={{ backgroundColor: '#0E7C7B' }}
-      >
-        Activate Boost Rules →
-      </button>
+    <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      {/* Subtle top accent bar */}
+      <div className="h-1 w-full" style={{ backgroundColor: ragColour }} />
+
+      <div className="p-5 flex items-start gap-5">
+        {/* Left: ScoreDial */}
+        <div className="flex-shrink-0">
+          <ScoreDial score={score} ragStatus={ragStatus} size={148} />
+        </div>
+
+        {/* Right: Score info */}
+        <div className="flex-1 min-w-0 pt-1 flex flex-col gap-3">
+          {/* Score + RAG + Refresh row */}
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-baseline gap-2.5 flex-wrap">
+              <span
+                className="text-5xl font-extrabold leading-none tabular-nums"
+                style={{ color: ragColour }}
+                data-testid="composite-score-display"
+              >
+                {score}
+              </span>
+              <span className="text-xl font-light text-slate-300">/100</span>
+              <span
+                className={`inline-block rounded-full px-3 py-0.5 text-xs font-bold uppercase tracking-widest ${ragBadgeClass}`}
+              >
+                {ragStatus}
+              </span>
+            </div>
+
+            {/* Refresh button */}
+            {onRefresh && (
+              <button
+                onClick={onRefresh}
+                disabled={isRefreshing}
+                data-testid="refresh-score-button"
+                className="flex-shrink-0 flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 hover:border-slate-300 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-60 transition-all"
+                style={{ focusRingColor: '#0E7C7B' } as React.CSSProperties}
+                aria-label="Refresh score from Bloomreach"
+              >
+                <RefreshIcon spinning={isRefreshing ?? false} />
+                {isRefreshing ? 'Refreshing…' : 'Refresh Score'}
+              </button>
+            )}
+          </div>
+
+          {/* Subtitle */}
+          <div>
+            <p className="text-sm font-semibold text-slate-700">
+              Personalisation Readiness Score
+            </p>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Last refreshed: {formattedDate}
+            </p>
+          </div>
+
+          {/* Health summary */}
+          <div
+            className="flex items-center gap-2 rounded-lg px-3 py-2"
+            style={{ backgroundColor: `${healthSummaryColour}10` }}
+          >
+            <span
+              className="h-2 w-2 rounded-full flex-shrink-0"
+              style={{ backgroundColor: healthSummaryColour }}
+              aria-hidden="true"
+            />
+            <p className="text-xs font-medium" style={{ color: healthSummaryColour }}>
+              {healthSummary}
+            </p>
+          </div>
+
+          {/* Hint for refresh flow */}
+          <p className="text-xs text-slate-400 leading-relaxed">
+            After making changes in Bloomreach, click <strong>Refresh Score</strong> to pull updated personalisation metrics.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
@@ -288,23 +421,30 @@ function BoostCallout({
 export default function PRSScorecard({
   prsState,
   onReviewFix,
-  onActivateBoostRules,
-  isBoostActive = false,
+  onRefreshScore,
+  isRefreshing = false,
 }: PRSScorecardProps) {
   if (!prsState) {
-    // Skeleton while loading
     return (
-      <div className="p-6 space-y-6" data-testid="prs-scorecard-skeleton">
-        <div className="flex gap-6">
-          <div className="h-40 w-40 rounded-full bg-slate-100 animate-pulse flex-shrink-0" />
-          <div className="flex-1 space-y-3 pt-2">
-            <div className="h-10 w-24 bg-slate-200 rounded animate-pulse" />
-            <div className="h-4 w-48 bg-slate-100 rounded animate-pulse" />
-            <div className="h-20 bg-slate-100 rounded-xl animate-pulse" />
+      <div className="p-6 space-y-5 max-w-4xl mx-auto" data-testid="prs-scorecard-skeleton">
+        {/* Hero skeleton */}
+        <div className="rounded-xl border border-slate-200 bg-white p-5 animate-pulse">
+          <div className="flex gap-5">
+            <div className="h-36 w-36 rounded-full bg-slate-100 flex-shrink-0" />
+            <div className="flex-1 space-y-3 pt-2">
+              <div className="h-10 w-24 bg-slate-200 rounded" />
+              <div className="h-4 w-48 bg-slate-100 rounded" />
+              <div className="h-9 bg-slate-100 rounded-lg" />
+            </div>
           </div>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-white p-4">
+        {/* Dimensions skeleton */}
+        <div className="rounded-xl border border-slate-200 bg-white px-5 py-2">
           {[1, 2, 3, 4, 5].map(i => <SkeletonDimRow key={i} />)}
+        </div>
+        {/* Fixes skeleton */}
+        <div className="space-y-3">
+          {[1, 2, 3].map(i => <SkeletonFixCard key={i} />)}
         </div>
       </div>
     );
@@ -312,14 +452,8 @@ export default function PRSScorecard({
 
   const { composite_score, rag_status, dimensions, fix_list, generated_at } = prsState;
 
-  const ragColour = RAG_COLOUR[rag_status] ?? RAG_COLOUR.amber;
-
-  const ragBadgeClass =
-    rag_status === 'red'
-      ? 'bg-red-100 text-red-700'
-      : rag_status === 'green'
-        ? 'bg-green-100 text-green-700'
-        : 'bg-amber-100 text-amber-700';
+  const criticalCount = dimensions.filter(d => d.status === 'critical').length;
+  const warningCount  = dimensions.filter(d => d.status === 'warning').length;
 
   const formattedDate = generated_at
     ? new Date(generated_at).toLocaleString('en-GB', {
@@ -332,63 +466,32 @@ export default function PRSScorecard({
     : '—';
 
   return (
-    <div className="p-6 space-y-6 max-w-4xl mx-auto" data-testid="prs-scorecard">
+    <div className="p-6 space-y-5 max-w-4xl mx-auto" data-testid="prs-scorecard">
 
-      {/* ── Section 1: Two-column header ── */}
-      <div className="flex items-start gap-6">
-
-        {/* Left: ScoreDial */}
-        <div className="flex-shrink-0">
-          <ScoreDial score={composite_score} ragStatus={rag_status} size={160} />
-        </div>
-
-        {/* Right: Score display + boost callout */}
-        <div className="flex-1 min-w-0 space-y-3 pt-1">
-
-          {/* Score number + RAG badge */}
-          <div className="flex items-baseline gap-3 flex-wrap">
-            <span
-              className="text-5xl font-extrabold leading-none"
-              style={{ color: ragColour }}
-              data-testid="composite-score-display"
-            >
-              {composite_score}
-            </span>
-            <span className="text-2xl font-light text-slate-400">/100</span>
-            <span
-              className={`inline-block rounded-full px-3 py-0.5 text-xs font-semibold uppercase tracking-wide ${ragBadgeClass}`}
-            >
-              {rag_status}
-            </span>
-          </div>
-
-          {/* Subtitle + timestamp */}
-          <div>
-            <p className="text-sm font-medium text-slate-600">
-              Personalisation Readiness Score
-            </p>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Last refreshed: {formattedDate}
-            </p>
-          </div>
-
-          {/* Boost callout */}
-          <BoostCallout
-            isBoostActive={isBoostActive}
-            onActivate={onActivateBoostRules}
-          />
-        </div>
-      </div>
+      {/* ── Section 1: Hero ── */}
+      <ScoreHero
+        score={composite_score}
+        ragStatus={rag_status}
+        formattedDate={formattedDate}
+        criticalCount={criticalCount}
+        warningCount={warningCount}
+        onRefresh={onRefreshScore}
+        isRefreshing={isRefreshing}
+      />
 
       {/* ── Section 2: PRS Dimensions ── */}
-      <div className="rounded-xl border border-slate-200 bg-white px-4">
-        <div className="flex items-center justify-between py-3 border-b border-slate-100">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+      <div className="rounded-xl border border-slate-200 bg-white px-5">
+        <div className="flex items-center justify-between py-3.5 border-b border-slate-100">
+          <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400">
             PRS Dimensions
           </h3>
-          <span className="text-xs text-slate-400 hidden sm:block">
-            Discovery API&nbsp;•&nbsp;Marketing MCP&nbsp;•&nbsp;Analytics MCP
-          </span>
+          <div className="flex items-center gap-2 text-xs text-slate-300">
+            <span>Discovery API</span>
+            <span>·</span>
+            <span>Marketing MCP</span>
+            <span>·</span>
+            <span>Analytics MCP</span>
+          </div>
         </div>
         {dimensions.map(dim => (
           <DimensionRow key={dim.dimension_id} dim={dim} />
@@ -398,9 +501,12 @@ export default function PRSScorecard({
       {/* ── Section 3: Top Fixes ── */}
       {fix_list && fix_list.length > 0 && (
         <div>
-          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
-            Top Fixes
-          </h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400">
+              Top Fixes
+            </h3>
+            <span className="text-xs text-slate-300">Ranked by revenue impact</span>
+          </div>
           <div className="space-y-3">
             {fix_list.map(fix => (
               <FixCard key={fix.fix_id} fix={fix} onReview={onReviewFix} />

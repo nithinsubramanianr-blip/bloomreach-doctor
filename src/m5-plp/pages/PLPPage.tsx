@@ -1,15 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import personasJson from '../../../data/personas.json';
 import PersonaSwitcher, {
   applyPersonaCookie,
   type PersonaOption,
 } from '../components/PersonaSwitcher';
-import BeforeAfterToggle from '../components/BeforeAfterToggle';
 import ProductGrid from '../components/ProductGrid';
 import resultCache, {
   type DiscoveryProduct,
-  type DisplayState,
   type PersonaId,
 } from '../lib/resultCache';
 import { search as discoverySearch } from '../lib/discoveryClient';
@@ -17,15 +15,13 @@ import { search as discoverySearch } from '../lib/discoveryClient';
 /**
  * PLPPage — route "/"
  *
- * Owns: activePersonaId, displayState, products (loading=null).
- * Hardcoded query "necklace" for all three personas.
- *
+ * Always displays live/personalised results — no Before/After toggle.
  * Fetch chain (never empty grid):
- *   1) fresh resultCache entry        → return
- *   2) discoveryClient.search w/ 2s   → store + return
- *   3) timeout / error                → resultCache.loadFromFile()
+ *   1) Always forces a fresh Discovery call (clears cache on mount/persona switch)
+ *   2) discoveryClient.search with 3s timeout → store in cache + return
+ *   3) timeout / error → resultCache.loadFromFile('after') as fallback
  *
- * Spec: 006-react-plp / FR-006-1..25
+ * Refresh button: clears cache entry and re-triggers fetch.
  */
 
 const DEMO_QUERY = 'necklace';
@@ -50,19 +46,11 @@ function getBruidCookie(): string | null {
   return value.length > 0 ? `_br_uid_2=${value}` : null;
 }
 
-async function fetchProducts(
+async function fetchProductsLive(
   personaId: PersonaId | string,
-  state: DisplayState,
 ): Promise<DiscoveryProduct[]> {
-  // 1. Fresh cache hit?
-  if (!resultCache.isStale(personaId, state)) {
-    const hit = resultCache.get(personaId, state);
-    if (hit) return hit.products;
-  }
-
-  // 2. Live Discovery with 2s timeout.
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 2000);
+  const timer = setTimeout(() => controller.abort(), 3000);
   try {
     const live = await discoverySearch(
       DEMO_QUERY,
@@ -71,90 +59,167 @@ async function fetchProducts(
     );
     clearTimeout(timer);
     if (live.products && live.products.length > 0) {
-      resultCache.set(personaId, state, {
+      resultCache.set(personaId, 'after', {
         products: live.products,
         cached_at: Date.now(),
       });
       return live.products;
     }
-    // Empty live result — fall through to file fallback so grid is non-empty.
     throw new Error('Empty live result');
-  } catch {
+  } catch(err) {
+    console.warn('Live fetch failed, falling back to cache file', err);
     clearTimeout(timer);
-    // 3. File fallback — guaranteed non-empty by resultCache.loadFromFile.
-    const file = resultCache.loadFromFile(personaId, state);
-    resultCache.set(personaId, state, file);
+    const file = resultCache.loadFromFile(personaId, 'after');
+    resultCache.set(personaId, 'after', file);
     return file.products;
   }
 }
 
 export default function PLPPage() {
   const [activePersonaId, setActivePersonaId] = useState<string>('guest');
-  const [displayState, setDisplayState] = useState<DisplayState>('before');
   const [products, setProducts] = useState<DiscoveryProduct[] | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastFetchedAt, setLastFetchedAt] = useState<Date | null>(null);
 
-  // Apply the initial Guest cookie state (deleted) once on mount.
+  const loadProducts = useCallback(async (personaId: string, force = false) => {
+    if (force) {
+      resultCache.set(personaId, 'after', {
+        products: [],
+        cached_at: 0,
+      });
+    }
+    setProducts(null);
+    const result = await fetchProductsLive(personaId);
+    setProducts(result);
+    setLastFetchedAt(new Date());
+  }, []);
+
+  // Apply cookie and load on mount.
   useEffect(() => {
     const initial = rawPersonas.find((p) => p.persona_id === activePersonaId);
     if (initial) applyPersonaCookie(initial);
+    loadProducts(activePersonaId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Reload when persona switches.
   useEffect(() => {
     let cancelled = false;
     setProducts(null);
-    fetchProducts(activePersonaId, displayState).then((p) => {
-      if (!cancelled) setProducts(p);
+    fetchProductsLive(activePersonaId).then((p) => {
+      if (!cancelled) {
+        setProducts(p);
+        setLastFetchedAt(new Date());
+      }
     });
-    return () => {
-      cancelled = true;
-    };
-  }, [activePersonaId, displayState]);
+    return () => { cancelled = true; };
+  }, [activePersonaId]);
+
+  async function handleRefresh() {
+    setIsRefreshing(true);
+    try {
+      await loadProducts(activePersonaId, true);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }
+
+  function handlePersonaChange(id: string) {
+    const persona = rawPersonas.find((p) => p.persona_id === id);
+    if (persona) applyPersonaCookie(persona);
+    setActivePersonaId(id);
+  }
 
   const brandLabel =
     (import.meta as any)?.env?.VITE_APP_DEMO_BRAND ?? 'Kendra Scott';
 
+  const formattedTime = lastFetchedAt
+    ? lastFetchedAt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    : null;
+
   return (
     <div className="min-h-screen bg-slate-50">
+      {/* ── Header ── */}
       <header
         data-testid="plp-header"
-        className="flex h-16 items-center justify-between px-6"
+        className="flex h-16 items-center justify-between px-6 shadow-sm"
         style={{ backgroundColor: '#1B3A5C' }}
       >
-        <div className="flex items-center gap-4 text-white">
-          <span className="text-lg font-semibold">{brandLabel}</span>
+        <div className="flex items-center gap-4">
+          <span className="text-lg font-bold text-white tracking-tight">{brandLabel}</span>
           <Link
             to="/doctor"
-            className="text-xs uppercase tracking-wide text-white/70 hover:text-white"
+            className="flex items-center gap-1.5 rounded-lg border border-white/20 px-3 py-1.5 text-xs font-semibold text-white/80 hover:border-white/40 hover:text-white hover:bg-white/10 transition-colors"
+            data-testid="nav-ppd-doctor"
           >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+            </svg>
             PPD Doctor
           </Link>
         </div>
         <PersonaSwitcher
           personas={rawPersonas}
           activePersonaId={activePersonaId}
-          onChange={(id) => setActivePersonaId(id)}
+          onChange={handlePersonaChange}
         />
       </header>
 
       <main className="mx-auto max-w-7xl px-6 py-6">
-        <div className="mb-4 flex items-center justify-between">
+        {/* ── Page header row ── */}
+        <div className="mb-5 flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-xl font-semibold text-ppd-navy">
+            <h1 className="text-xl font-bold text-slate-800">
               Search results for "{DEMO_QUERY}"
             </h1>
-            <p className="text-sm text-slate-600">
-              Persona-aware ranking. Toggle Before/After to see the impact of
-              boost rule activation.
-            </p>
+            <div className="mt-1.5 flex items-center gap-2">
+              <span
+                className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold text-white"
+                style={{ backgroundColor: '#0E7C7B' }}
+              >
+                <span
+                  className="h-1.5 w-1.5 rounded-full bg-white/80 animate-pulse"
+                  aria-hidden="true"
+                />
+                Live · Personalised results
+              </span>
+              {formattedTime && (
+                <span className="text-xs text-slate-400">
+                  Updated {formattedTime}
+                </span>
+              )}
+            </div>
           </div>
-          <BeforeAfterToggle
-            value={displayState}
-            onChange={(v) => setDisplayState(v)}
-          />
+
+          {/* Refresh button */}
+          <button
+            onClick={handleRefresh}
+            disabled={isRefreshing || products === null}
+            data-testid="refresh-results-button"
+            className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 shadow-sm hover:border-slate-300 hover:shadow-md focus:outline-none focus:ring-2 disabled:opacity-50 transition-all"
+          >
+            <svg
+              width="13"
+              height="13"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className={isRefreshing ? 'animate-spin' : ''}
+              aria-hidden="true"
+            >
+              <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+              <path d="M21 3v5h-5" />
+              <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+              <path d="M8 16H3v5" />
+            </svg>
+            {isRefreshing ? 'Refreshing…' : 'Refresh Results'}
+          </button>
         </div>
 
-        <ProductGrid products={products} displayState={displayState} />
+        <ProductGrid products={products} displayState="after" />
       </main>
     </div>
   );

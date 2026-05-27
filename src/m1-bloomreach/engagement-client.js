@@ -92,11 +92,48 @@ function readSyntheticSegmentStatus() {
 }
 
 async function callLivePersonas() {
-  throw new Error('live Engagement not configured — sandbox credentials unavailable');
+  // Demo personas (Guest / Sarah / Alex) are synthetic constructs with no
+  // matching live Engagement customer profiles — keep synthetic path.
+  throw new Error('live Engagement personas not available — demo personas are synthetic');
 }
 
 async function callLiveSegmentStatus() {
-  throw new Error('live Engagement not configured — sandbox credentials unavailable');
+  const base = process.env.BLOOMREACH_ENGAGEMENT_BASE_URL;
+  const projectId = process.env.BLOOMREACH_PROJECT_ID;
+  const apiKey = process.env.BLOOMREACH_ENGAGEMENT_API_KEY;
+
+  if (!base || !projectId || !apiKey) {
+    throw new Error(
+      'segment status: BLOOMREACH_ENGAGEMENT_BASE_URL, BLOOMREACH_PROJECT_ID, '
+      + 'BLOOMREACH_ENGAGEMENT_API_KEY required',
+    );
+  }
+
+  const res = await fetch(
+    `${base}/api/segmentations?company_id=${encodeURIComponent(projectId)}`,
+    { headers: { Authorization: `Bearer ${apiKey}` } },
+  );
+  if (!res.ok) throw new Error(`segmentations API ${res.status}`);
+
+  const data = await res.json();
+  const segmentations = (data.data || []).filter((s) => !s.archived);
+
+  const segments = segmentations.map((s) => ({
+    segment_id: s._id,
+    segment_name: s.name,
+    persona_linked: null,
+    linked_boost_rule: null,
+    is_active: !s.archived,
+    member_count: 0,
+    is_synthetic: false,
+  }));
+
+  return {
+    total: segments.length,
+    segments,
+    checked_at: new Date().toISOString(),
+    is_synthetic: false,
+  };
 }
 
 module.exports = {

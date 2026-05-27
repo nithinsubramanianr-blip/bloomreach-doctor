@@ -5,16 +5,19 @@
  * Owns all top-level state: active tab, PRS data, modal open/close,
  * approved actions list (local only — Invariant #8, no API write).
  *
+ * Tabs: PRS Scorecard | Ask the Doctor
+ * Shopper Simulator removed per product requirements.
+ *
  * Design palette:
  *   Navy  #1B3A5C — header, tab text
- *   Teal  #0E7C7B — active tab, CTAs
+ *   Teal  #0E7C7B — active tab, CTAs, Approve button
  *   Amber #F59E0B — warning
  *   White #FFFFFF — card backgrounds
  */
 
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import PRSScorecard, { type PRSState } from './modules/PRSScorecard';
-import ShopperSimulator from './modules/ShopperSimulator';
 import NLChat from './modules/NLChat';
 import ApprovalModal from './components/ApprovalModal';
 import type { FixResult } from './components/ApprovalModal';
@@ -23,7 +26,7 @@ import type { FixResult } from './components/ApprovalModal';
 // Types
 // --------------------------------------------------------------------------
 
-type ActiveTab = 'scorecard' | 'simulator' | 'doctor';
+type ActiveTab = 'scorecard' | 'doctor';
 
 interface ApprovedAction {
   fix_id: string;
@@ -35,19 +38,13 @@ interface ApprovedAction {
 // Tab definitions
 // --------------------------------------------------------------------------
 
-const TABS: { id: ActiveTab; label: string }[] = [
-  { id: 'scorecard',  label: 'PRS Scorecard' },
-  { id: 'simulator',  label: 'Shopper Simulator' },
-  { id: 'doctor',     label: 'Ask the Doctor' },
+const TABS: { id: ActiveTab; label: string; icon: string }[] = [
+  { id: 'scorecard', label: 'PRS Scorecard', icon: '📊' },
+  { id: 'doctor',    label: 'Ask the Doctor', icon: '🩺' },
 ];
 
 // --------------------------------------------------------------------------
 // PRS data bootstrap
-//
-// Imports the pre-fix synthetic JSON directly. calculatePRS and generateFixList
-// are called to produce the M2→M4 PRS State Object shape expected by PRSScorecard.
-// This mirrors the "On mount: PRSScorecard → calculatePRS" data flow in the
-// architecture spec.
 // --------------------------------------------------------------------------
 
 // CJS modules imported as ESM default — Vite/esbuild synthesises named exports.
@@ -85,7 +82,7 @@ export default function DashboardApp() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedFix, setSelectedFix] = useState<FixResult | null>(null);
   const [approvedActions, setApprovedActions] = useState<ApprovedAction[]>([]);
-  const [isBoostActive, setIsBoostActive] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Load PRS data on mount.
   useEffect(() => {
@@ -97,18 +94,25 @@ export default function DashboardApp() {
       });
   }, []);
 
-  // ---------- Modal handlers ----------
-
-  async function handleActivateBoostRules() {
+  // ---------- Refresh handler ----------
+  // Called when user returns from Bloomreach after activating boost rules.
+  // setRuntimeState('post_fix') simulates the system detecting active rules
+  // via Discovery API (in synthetic mode this switches to the post-fix data).
+  async function handleRefreshScore() {
+    setIsRefreshing(true);
     setRuntimeState('post_fix');
     try {
       const state = await loadPRSState();
       setPrsState(state);
-      setIsBoostActive(true);
     } catch (err) {
-      console.error('[M4] Boost rules activation error:', err);
+      // eslint-disable-next-line no-console
+      console.error('[M4] PRS refresh error:', err);
+    } finally {
+      setIsRefreshing(false);
     }
   }
+
+  // ---------- Modal handlers ----------
 
   function handleReviewFix(fix: FixResult) {
     setSelectedFix(fix);
@@ -123,7 +127,6 @@ export default function DashboardApp() {
       status: 'pending_team_review',
     };
     setApprovedActions(prev => [...prev, action]);
-    // Modal stays open to show confirmation — user closes it via Done/Dismiss.
   }
 
   function handleCloseModal() {
@@ -135,26 +138,47 @@ export default function DashboardApp() {
     <div className="min-h-screen bg-slate-50" data-testid="dashboard-app">
       {/* ── Header ── */}
       <header
-        className="px-6 py-4 flex items-center justify-between shadow-sm"
+        className="px-6 py-4 flex items-center justify-between shadow-md"
         style={{ backgroundColor: '#1B3A5C' }}
         data-testid="dashboard-header"
       >
-        <div>
-          <h1 className="text-lg font-bold text-white leading-tight">
-            Personalization Performance Doctor
-          </h1>
-          <p className="text-xs font-medium text-blue-200">Kendra Scott</p>
-        </div>
-        {/* Approved actions badge (visible when actions have been approved) */}
-        {approvedActions.length > 0 && (
-          <span
-            className="rounded-full px-3 py-1 text-xs font-semibold text-white"
-            style={{ backgroundColor: '#0E7C7B' }}
-            data-testid="approved-count-badge"
+        <div className="flex items-center gap-3">
+          <div
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-lg"
+            style={{ backgroundColor: 'rgba(14,124,123,0.3)' }}
           >
-            {approvedActions.length} fix{approvedActions.length !== 1 ? 'es' : ''} queued
-          </span>
-        )}
+            🩺
+          </div>
+          <div>
+            <h1 className="text-base font-bold text-white leading-tight">
+              Personalization Performance Doctor
+            </h1>
+            <p className="text-xs text-blue-200">Kendra Scott · Powered by Bloomreach</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          {approvedActions.length > 0 && (
+            <span
+              className="rounded-full px-3 py-1 text-xs font-semibold text-white"
+              style={{ backgroundColor: '#0E7C7B' }}
+              data-testid="approved-count-badge"
+            >
+              {approvedActions.length} fix{approvedActions.length !== 1 ? 'es' : ''} queued
+            </span>
+          )}
+          <Link
+            to="/"
+            className="flex items-center gap-1.5 rounded-lg border border-white/20 px-3 py-1.5 text-xs font-semibold text-white/80 hover:border-white/40 hover:text-white hover:bg-white/10 transition-colors"
+            data-testid="nav-live-store"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+              <line x1="3" y1="6" x2="21" y2="6"/>
+              <path d="M16 10a4 4 0 0 1-8 0"/>
+            </svg>
+            Live Store
+          </Link>
+        </div>
       </header>
 
       {/* ── Tab bar ── */}
@@ -172,11 +196,12 @@ export default function DashboardApp() {
               aria-selected={isActive}
               onClick={() => setActiveTab(tab.id)}
               data-testid={`tab-${tab.id}`}
-              className={`mr-1 px-4 py-3 text-sm font-semibold transition-colors border-b-2 ${
-                isActive ? 'border-current' : 'border-transparent text-slate-600 hover:text-slate-900'
+              className={`mr-1 flex items-center gap-1.5 px-4 py-3 text-sm font-semibold transition-colors border-b-2 ${
+                isActive ? 'border-current' : 'border-transparent text-slate-500 hover:text-slate-800'
               }`}
               style={isActive ? { color: '#0E7C7B', borderColor: '#0E7C7B' } : undefined}
             >
+              <span className="text-base leading-none">{tab.icon}</span>
               {tab.label}
             </button>
           );
@@ -190,15 +215,9 @@ export default function DashboardApp() {
             <PRSScorecard
               prsState={prsState as PRSState}
               onReviewFix={handleReviewFix}
-              onActivateBoostRules={handleActivateBoostRules}
-              isBoostActive={isBoostActive}
+              onRefreshScore={handleRefreshScore}
+              isRefreshing={isRefreshing}
             />
-          </div>
-        )}
-
-        {activeTab === 'simulator' && (
-          <div role="tabpanel" data-testid="panel-simulator">
-            <ShopperSimulator />
           </div>
         )}
 

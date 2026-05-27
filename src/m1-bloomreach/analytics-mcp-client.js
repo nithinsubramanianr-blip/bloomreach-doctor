@@ -11,6 +11,7 @@
 
 const { loadSyntheticDimension, isLiveMode } = require('./_synthetic-loader');
 const { normaliseDimension } = require('./normaliser');
+const { callMcpToolWithRetry } = require('./mcp-bridge');
 
 const CLIENT_NAME = 'analytics-mcp-client';
 
@@ -35,7 +36,28 @@ async function fetchABTestCoverage() {
 }
 
 async function callLiveABTestCoverage() {
-  throw new Error('live Analytics MCP not configured — endpoint unavailable');
+  const projectId = process.env.BLOOMREACH_PROJECT_ID;
+  if (!projectId) throw new Error('BLOOMREACH_PROJECT_ID required');
+
+  // MCP: list_experiments — running vs total experiments in the project.
+  const payload = await callMcpToolWithRetry('list_experiments', { project_id: projectId });
+
+  const all = (payload.data || []).filter((e) => !e.archived);
+  const running = all.filter((e) => e.status === 'running').length;
+  const total = all.length;
+
+  const raw_value = total > 0 ? running / total : 0;
+  const normalised_score = Math.min(20, Math.round(raw_value * 20));
+  const status = normalised_score <= 8 ? 'critical' : normalised_score <= 14 ? 'warning' : 'healthy';
+
+  return {
+    dimension_id: 'ab_test_coverage',
+    raw_value,
+    normalised_score,
+    status,
+    data_source: 'analytics_mcp',
+    timestamp: new Date().toISOString(),
+  };
 }
 
 module.exports = {

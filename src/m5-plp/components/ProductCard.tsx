@@ -17,8 +17,12 @@ interface ProductCardProps {
   displayState: 'before' | 'after';
 }
 
-function formatGBP(price: number): string {
-  return `£${price.toFixed(2)}`;
+function formatPrice(price: number, currency = 'GBP'): string {
+  try {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(price);
+  } catch {
+    return `${currency} ${price.toFixed(2)}`;
+  }
 }
 
 export default function ProductCard({
@@ -69,7 +73,7 @@ export default function ProductCard({
           {product.name}
         </span>
         <span className="text-sm font-semibold text-slate-900">
-          {formatGBP(product.price)}
+          {formatPrice(product.price, product.currency)}
         </span>
         {product.category ? (
           <span className="text-xs uppercase tracking-wide text-slate-500">
