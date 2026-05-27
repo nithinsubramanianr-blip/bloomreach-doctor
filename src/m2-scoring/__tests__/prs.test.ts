@@ -20,18 +20,26 @@ const postFixDimensions = postFix.dimensions as DimensionObject[];
 // ---------------------------------------------------------------------------
 
 describe("PRS mandatory tests", () => {
-  it("Test 1 — pre-fix state scores 52 Amber with BRUID & AutoSegment critical", () => {
+  it("Test 1 — REAL pre-fix state scores 28 Red from MCP-harvested values", () => {
     const result = calculatePRS(preFixDimensions);
-    expect(result.composite_score).toBe(52);
-    expect(result.rag_status).toBe("amber");
-    expect(
-      result.dimensions.find((d) => d.dimension_id === "bruid_match_rate")
-        ?.status
-    ).toBe("critical");
-    expect(
-      result.dimensions.find((d) => d.dimension_id === "autosegment_coverage")
-        ?.status
-    ).toBe("critical");
+    // 8 (bruid*) + 0 (autosegment) + 2 (freshness) + 18 (rule_conflicts*) + 0 (ab) = 28
+    // (* = Discovery placeholder; the three MCP dims are the real harvested values)
+    expect(result.composite_score).toBe(28);
+    expect(result.rag_status).toBe("red");
+
+    const dim = (id: string) =>
+      result.dimensions.find((d) => d.dimension_id === id);
+
+    // Real MCP dimensions — show 0 where it is 0, no fabrication.
+    expect(dim("autosegment_coverage")?.score).toBe(0);
+    expect(dim("ab_test_coverage")?.score).toBe(0);
+    expect(dim("signal_freshness")?.score).toBe(2); // round(0.1056 * 20)
+
+    // All three real MCP dimensions are critical; so is the BRUID placeholder.
+    expect(dim("bruid_match_rate")?.status).toBe("critical");
+    expect(dim("autosegment_coverage")?.status).toBe("critical");
+    expect(dim("ab_test_coverage")?.status).toBe("critical");
+    expect(dim("signal_freshness")?.status).toBe("critical");
   });
 
   it("Test 2 — post-fix state scores 70 Amber with AutoSegment & ABTest healthy", () => {
@@ -51,6 +59,9 @@ describe("PRS mandatory tests", () => {
   it("Test 3 — fix list from pre-fix ranks AutoSegment, BRUID, A/B Coverage", () => {
     const prs = calculatePRS(preFixDimensions);
     const fixes = generateFixList(prs);
+    // signal_freshness is the 3rd-worst real dimension (score 2) but has no
+    // catalogue fix, so it is skipped and BRUID (next fixable) takes the slot.
+    expect(fixes).toHaveLength(3);
     expect(fixes[0].dimension).toBe("autosegment_coverage");
     expect(fixes[1].dimension).toBe("bruid_match_rate");
     expect(fixes[2].dimension).toBe("ab_test_coverage");

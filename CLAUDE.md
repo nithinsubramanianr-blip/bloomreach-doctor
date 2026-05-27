@@ -333,7 +333,7 @@ Wait for my approval before doing anything.
 6. **Module C uses Claude native tool use** — `tool_choice: auto`. Claude decides which tools to call.
 7. **Module B is live** — it calls Discovery search API. Never revert to static mockup.
 8. **ApprovalModal = NO API write** — application state only.
-9. **Currency is GBP throughout** — no USD in product data.
+9. **Currency is USD throughout** — USD in product data.
 10. **Three personas only** — Guest, Sarah, Alex. No fourth persona.
 11. **Demo query is "necklace" for all three personas** — hardcoded.
 12. **No real Kendra Scott product data** — all 50 products are generic jewellery.

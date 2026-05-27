@@ -157,10 +157,31 @@ export interface FixResult {
 
 export type PersonaId = "guest" | "sarah" | "alex";
 
-/** A single behavioural event in a persona's session history (provenance). */
+/**
+ * A single behavioural event in a persona's session history (provenance).
+ * The persona journeys are now REAL events harvested from Bloomreach Engagement
+ * via the loomi MCP, so the type vocabulary mirrors the real Engagement event
+ * types rather than a synthetic subset.
+ */
 export interface PersonaEvent {
-  type: "page_view" | "search" | "wishlist_add" | "purchase";
-  category: string; // product category or search term
+  type:
+    | "page_view"
+    | "search"
+    | "wishlist_add"
+    | "purchase"
+    | "view_item"
+    | "view_category"
+    | "cart_update"
+    | "checkout"
+    | "banner"
+    | "registration"
+    | "consent"
+    | "loyalty_update"
+    | "survey"
+    | "support_ticket";
+  category: string; // product category, search term, or short label
+  /** Specifics for the chip — e.g. the product title + price, or a note. */
+  detail?: string;
   timestamp: string; // ISO8601
 }
 
@@ -185,6 +206,13 @@ export interface Persona {
   personalisation_gap?: string;
   /** Behavioural events that justify this persona's segment assignment. */
   journey?: PersonaEvent[];
+  /** Provenance: the real Bloomreach customer this persona is sourced from. */
+  real_customer?: {
+    customer_id: string;
+    identifier: string;
+    location?: string;
+    total_events: number;
+  };
 }
 
 export interface Product {

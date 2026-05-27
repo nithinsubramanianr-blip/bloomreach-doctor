@@ -15,8 +15,9 @@ import type {
  * BOTH the locked synthetic values AND a live formula path, each scorer:
  *   - uses `normalised_score` when provided (the locked / live-normalised value),
  *   - otherwise applies the formula `min(20, round(raw_value * 20))`.
- * This keeps the scorers pure and lets the demo hit 52/70 exactly while a live
- * integration can pass raw values only.
+ * This keeps the scorers pure: the real pre-fix dimensions carry their derived
+ * normalised_score (round(raw*20)) and the synthetic post-fix state carries its
+ * locked values, while a live integration can pass raw values only.
  */
 
 const MAX_SCORE = 20 as const;

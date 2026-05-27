@@ -11,24 +11,13 @@ import type {
 } from "@/lib/contracts";
 import { serverEnv } from "@/lib/env";
 import { fetchAllDimensions } from "@/m1-bloomreach/prs-data-fetcher";
-import { loadPersonas } from "@/m1-bloomreach/synthetic-loader";
+import {
+  loomiFindings,
+  loomiPersonaContext,
+} from "@/m1-bloomreach/synthetic-loader";
 import { generateFixList } from "@/m2-scoring/fix-generator";
 import { calculatePRS } from "@/m2-scoring/prs-calculator";
 import { explainWithClaude } from "./llm-explainer";
-
-/** Builds the active-shopper context string the Doctor can cite (FR step 5). */
-async function buildPersonaContext(
-  personaId: PersonaId
-): Promise<string | undefined> {
-  const persona = (await loadPersonas()).find((p) => p.persona_id === personaId);
-  if (!persona) return undefined;
-  const events = (persona.journey ?? [])
-    .map((e) => `${e.type} (${e.category}) on ${e.timestamp}`)
-    .join("; ");
-  return `${persona.display_name} — segment "${persona.segment_name}". Recent events: ${
-    events || "none recorded"
-  }.`;
-}
 
 /**
  * M3 entry point — the sole public API of the NL interface (FR-004-1).
@@ -110,7 +99,9 @@ function selectDimensions(
 
 function composeAnswer(
   intent: Intent,
-  prs: PRSState
+  prs: PRSState,
+  findings?: string,
+  personaContext?: string
 ): AgentResponse["llm_response"] {
   const sorted = [...prs.dimensions].sort((a, b) => a.score - b.score);
   const weakest = sorted.slice(0, 3);
@@ -123,7 +114,15 @@ function composeAnswer(
           .map((d) => d.dimension_name)
           .join(" and ")}.`;
 
-  const score_breakdown = weakest.map((d) => d.explanation).join(" ");
+  // Ground the explanation in the real MCP findings (and the active shopper's
+  // real events, when a persona is selected) so the Doctor cites them verbatim.
+  const score_breakdown = [
+    weakest.map((d) => d.explanation).join(" "),
+    findings ? `Live Bloomreach check: ${findings}.` : "",
+    personaContext ? `Active shopper — ${personaContext}` : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   const top_3_fixes = prs.fix_list.map(
     (f) => `${f.fix_title} (${f.revenue_impact})`
@@ -153,19 +152,24 @@ export async function handleQuery(
   const prs = calculatePRS(dimensions);
   prs.fix_list = generateFixList(prs);
 
+  // Real MCP findings + active-shopper context (both harvested, never invented).
+  // Only cite live findings against the real pre-fix state.
+  const findings = state === "before" ? await loomiFindings() : undefined;
+  const personaContext = personaId
+    ? await loomiPersonaContext(personaId)
+    : undefined;
+
   // Option A: when ANTHROPIC_API_KEY is present, delegate answer composition to
   // Claude with native tool use. Any failure (incl. a malformed reply) falls
   // through to the deterministic path below — the route never 500s.
   if (serverEnv.anthropicApiKey()) {
     try {
-      const personaContext = personaId
-        ? await buildPersonaContext(personaId)
-        : undefined;
       const { trace, llm_response } = await explainWithClaude(
         queryText,
         state,
         prs,
-        personaContext
+        personaContext,
+        findings
       );
       return {
         query: queryText,
@@ -179,7 +183,8 @@ export async function handleQuery(
     }
   }
 
-  // Fallback: deterministic, data-driven composition (untouched).
+  // Fallback: deterministic, data-driven composition — still cites the real
+  // findings and the active shopper's real events.
   const selected = selectDimensions(intent, queryText, prs.dimensions);
   const reasoning_trace = selected.map(traceStep);
 
@@ -187,7 +192,7 @@ export async function handleQuery(
     query: queryText,
     intent,
     reasoning_trace,
-    llm_response: composeAnswer(intent, prs),
+    llm_response: composeAnswer(intent, prs, findings, personaContext),
     timestamp: new Date().toISOString(),
   };
 }

@@ -1,36 +1,26 @@
 import "server-only";
 
 import type { DemoState, DimensionObject } from "@/lib/contracts";
-import { isLive } from "@/lib/env";
 import { normaliseDimension } from "./normaliser";
-import { loadRawDimension } from "./synthetic-loader";
+import { loadRawDimension, loomiRawDimension } from "./synthetic-loader";
 
 /**
  * Analytics MCP client — A/B test coverage.
- * Endpoint (live mode): BLOOMREACH_MCP_ANALYTICS_URL (HTTP transport, ADR-002-6).
+ *
+ * The pre-fix ("before") state is the REAL diagnosis: sourced from
+ * loomi-snapshot.json (0 experiments configured → 0% coverage), normalised with
+ * is_synthetic=false. The post-fix ("after") state remains the synthetic
+ * projected target from prs_post_fix.json.
  */
 
 export async function fetchABTestCoverage(
   state: DemoState = "before"
 ): Promise<DimensionObject> {
-  if (!isLive()) {
-    console.log("[m1-bloomreach] analytics-mcp-client using synthetic fallback");
-    return normaliseDimension(
-      await loadRawDimension(state, "ab_test_coverage"),
-      true
-    );
+  if (state === "before") {
+    return normaliseDimension(await loomiRawDimension("ab_test_coverage"), false);
   }
-  try {
-    // TODO(live): call Analytics MCP "A/B test coverage" tool.
-    return normaliseDimension(
-      await loadRawDimension(state, "ab_test_coverage"),
-      true
-    );
-  } catch {
-    console.log("[m1-bloomreach] analytics-mcp-client using synthetic fallback");
-    return normaliseDimension(
-      await loadRawDimension(state, "ab_test_coverage"),
-      true
-    );
-  }
+  return normaliseDimension(
+    await loadRawDimension(state, "ab_test_coverage"),
+    true
+  );
 }

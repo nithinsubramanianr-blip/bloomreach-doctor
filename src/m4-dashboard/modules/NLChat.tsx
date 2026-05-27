@@ -25,50 +25,51 @@ const PRE_LOADED_EXCHANGE: AgentResponse = {
     {
       tool_name: "fetchBRUIDMatchRate",
       tool_input: {},
-      tool_output_summary: "22% match rate — only 1 in 5 sessions identified",
+      tool_output_summary: "22% of sessions recognised — Discovery placeholder, not yet wired",
     },
     {
       tool_name: "fetchAutoSegmentCoverage",
       tool_input: {},
-      tool_output_summary: "14% coverage — most sessions have no audience segment",
+      tool_output_summary: "0 segmentations exist in the project — 0% AutoSegment coverage (MCP-harvested)",
     },
     {
       tool_name: "fetchSignalFreshness",
       tool_input: {},
-      tool_output_summary: "58% freshness — signals are 3–7 days old",
+      tool_output_summary:
+        "10.6% of customers active in last 90 days (13,010 of 123,164); 5,076 in 30 days; most recent event today (MCP-harvested)",
     },
     {
       tool_name: "fetchRuleConflicts",
       tool_input: {},
-      tool_output_summary: "95% conflict-free — rules are clean",
+      tool_output_summary: "95% conflict-free — Discovery placeholder, not yet wired",
     },
     {
       tool_name: "fetchABTestCoverage",
       tool_input: {},
-      tool_output_summary: "14% coverage — most queries have no A/B test",
+      tool_output_summary: "0 experiments / A/B tests configured — 0% coverage (MCP-harvested)",
     },
   ],
   llm_response: {
     summary_sentence:
-      "Your personalisation is scoring 52/100 because most sessions can't be identified or assigned to a segment.",
+      "Your personalisation is scoring 28/100 (red) — the foundation isn't in place yet: there are no audience segments and no A/B tests.",
     score_breakdown:
-      "BRUID match is only 22% — guest sessions have no persistent identity. AutoSegment coverage is 14% — segments haven't been created yet. Signal freshness is acceptable at 58% but will degrade without BRUID improvement.",
+      "AutoSegment coverage is 0% — 0 segmentations exist in the project. A/B coverage is 0% — 0 experiments are configured. Signal freshness is 10.6% — only 13,010 of 123,164 customers were active in the last 90 days, though the most recent event is from today. BRUID match (22%) and rule conflicts (95% conflict-free) are Discovery placeholders pending wiring.",
     top_3_fixes: [
-      "Create 3 manual audience segments in Bloomreach Engagement (12–18% RPV lift)",
-      "Enable BRUID persistence for guest sessions (8–15% RPV lift)",
-      "Configure A/B tests for personalised search queries (5–10% RPV lift)",
+      "Create 3 manual audience segments (12–18% RPV lift on targeted visitors)",
+      "Enable BRUID persistence for guest sessions (8–15% RPV lift on returning visitors)",
+      "Configure segment-scoped boost rules (5–10% RPV lift on search queries)",
     ],
     suggested_next_action:
-      "Start with audience segments — they unlock personalisation for 68% of your traffic with no code change required.",
+      "Start with audience segments — 0 exist today, and creating the three unlocks every downstream personalisation rule.",
   },
-  timestamp: "2026-05-22T00:00:00Z",
+  timestamp: "2026-05-26T20:14:29Z",
 };
 
 const PERSONA_OPTIONS = [
   { value: "", label: "All shoppers" },
-  { value: "guest", label: "Guest" },
-  { value: "sarah", label: "Sarah" },
-  { value: "alex", label: "Alex" },
+  { value: "guest", label: "Elva — New Prospecting" },
+  { value: "sarah", label: "Marvin — Gifting Intent" },
+  { value: "alex", label: "Jaylon — High Value Returning" },
 ];
 
 export function NLChat() {

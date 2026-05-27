@@ -1,13 +1,14 @@
 {
   "_meta": {
-    "description": "PRE-FIX PRS demo state. This is the demo START state — 52/100 Amber. Three boost rules INACTIVE. Locked canonical values.",
+    "description": "PRE-FIX PRS demo state — REAL pre-fix diagnosis. AutoSegment coverage, signal freshness and A/B coverage are MCP-harvested from the wobbly-donkey project (see loomi-snapshot.json). BRUID match rate and rule conflicts are Discovery-sourced PLACEHOLDERS until the Discovery side is wired. Composite recomputed from real values — no longer the hardcoded 52.",
     "state": "pre_fix",
-    "locked": true,
-    "generated_at": "2026-05-22T00:00:00Z",
-    "note": "Formula flag: round(raw×20) does not produce stated scores from stated raw values. e.g. round(0.22×20)=4 not 8. Architect must reconcile formula before Dev implements scorers."
+    "locked": false,
+    "generated_at": "2026-05-26T20:14:29Z",
+    "source": "loomi-snapshot.json (3 MCP dims) + Discovery placeholders (2 dims)",
+    "scoring": "score = min(20, round(raw_value × 20)); status 0–8 critical, 9–14 warning, 15–20 healthy"
   },
-  "composite_score": 52,
-  "rag_status": "amber",
+  "composite_score": 28,
+  "rag_status": "red",
   "rag_thresholds": {
     "red": { "min": 0, "max": 49 },
     "amber": { "min": 50, "max": 74 },
@@ -19,7 +20,7 @@
       "dimension_id": "bruid_match_rate",
       "dimension_name": "BRUID Match Rate",
       "raw_value": 0.22,
-      "raw_label": "22% of sessions have recognised BRUID cookie",
+      "raw_label": "22% of sessions recognised — Discovery placeholder, not yet wired",
       "normalised_score": 8,
       "max_score": 20,
       "status": "critical",
@@ -27,44 +28,47 @@
       "client": "discovery-client",
       "target_value": 0.70,
       "target_label": "70% target",
+      "is_placeholder": true,
       "is_synthetic": true,
       "timestamp": "2026-05-22T00:00:00Z"
     },
     {
       "dimension_id": "autosegment_coverage",
       "dimension_name": "AutoSegment Coverage",
-      "raw_value": 0.14,
-      "raw_label": "14% of sessions assigned to a named AutoSegment",
-      "normalised_score": 6,
+      "raw_value": 0.0,
+      "raw_label": "0 segmentations exist in the project — 0% AutoSegment coverage (MCP-harvested)",
+      "normalised_score": 0,
       "max_score": 20,
       "status": "critical",
       "data_source": "marketing_mcp",
       "client": "marketing-mcp-client",
       "target_value": 0.75,
       "target_label": "75% target",
-      "is_synthetic": true,
-      "timestamp": "2026-05-22T00:00:00Z"
+      "is_placeholder": false,
+      "is_synthetic": false,
+      "timestamp": "2026-05-26T20:14:29Z"
     },
     {
       "dimension_id": "signal_freshness",
       "dimension_name": "Signal Freshness",
-      "raw_value": 0.58,
-      "raw_label": "58% of behavioural signals within freshness threshold",
-      "normalised_score": 14,
+      "raw_value": 0.1056,
+      "raw_label": "10.6% of customers active in last 90 days (13,010 of 123,164); 5,076 in 30 days; most recent event today (MCP-harvested)",
+      "normalised_score": 2,
       "max_score": 20,
-      "status": "warning",
+      "status": "critical",
       "data_source": "marketing_mcp",
       "client": "marketing-mcp-client",
       "target_value": 0.80,
       "target_label": "80% target",
-      "is_synthetic": true,
-      "timestamp": "2026-05-22T00:00:00Z"
+      "is_placeholder": false,
+      "is_synthetic": false,
+      "timestamp": "2026-05-26T20:14:29Z"
     },
     {
       "dimension_id": "rule_conflicts",
       "dimension_name": "Rule Conflicts",
       "raw_value": 0.95,
-      "raw_label": "95% of active rules are conflict-free",
+      "raw_label": "95% conflict-free — Discovery placeholder, not yet wired",
       "normalised_score": 18,
       "max_score": 20,
       "status": "healthy",
@@ -72,28 +76,31 @@
       "client": "discovery-client",
       "target_value": 1.0,
       "target_label": "100% target (zero conflicts)",
-      "note": "Higher raw_value = healthier. This is the highest-scoring dimension pre-fix — NOT a problem area.",
+      "note": "Higher raw_value = healthier. Discovery placeholder pending live wiring.",
+      "is_placeholder": true,
       "is_synthetic": true,
       "timestamp": "2026-05-22T00:00:00Z"
     },
     {
       "dimension_id": "ab_test_coverage",
       "dimension_name": "A/B Test Coverage",
-      "raw_value": 0.14,
-      "raw_label": "14% of personalisation decisions have active A/B tests",
-      "normalised_score": 6,
+      "raw_value": 0.0,
+      "raw_label": "0 experiments / A/B tests configured — 0% coverage (MCP-harvested)",
+      "normalised_score": 0,
       "max_score": 20,
       "status": "critical",
       "data_source": "analytics_mcp",
       "client": "analytics-mcp-client",
       "target_value": 0.60,
       "target_label": "60% target",
-      "is_synthetic": true,
-      "timestamp": "2026-05-22T00:00:00Z"
+      "is_placeholder": false,
+      "is_synthetic": false,
+      "timestamp": "2026-05-26T20:14:29Z"
     }
   ],
   "score_verification": {
-    "sum_check": "8+6+14+18+6 = 52 ✓",
-    "composite_score": 52
+    "sum_check": "8 (bruid*) + 0 (autosegment) + 2 (freshness) + 18 (rule_conflicts*) + 0 (ab) = 28",
+    "composite_score": 28,
+    "note": "* = Discovery placeholder. Real MCP dims = autosegment, signal_freshness, ab_test_coverage."
   }
 }

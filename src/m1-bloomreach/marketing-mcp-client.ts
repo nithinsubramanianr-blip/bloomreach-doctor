@@ -1,61 +1,38 @@
 import "server-only";
 
 import type { DemoState, DimensionObject } from "@/lib/contracts";
-import { isLive } from "@/lib/env";
 import { normaliseDimension } from "./normaliser";
-import { loadRawDimension } from "./synthetic-loader";
+import { loadRawDimension, loomiRawDimension } from "./synthetic-loader";
 
 /**
  * Marketing MCP client — AutoSegment coverage and signal freshness.
- * Endpoint (live mode): BLOOMREACH_MCP_MARKETING_URL (HTTP transport, ADR-002-6).
+ *
+ * The pre-fix ("before") state is the REAL diagnosis: sourced from
+ * loomi-snapshot.json (harvested live from the wobbly-donkey Engagement project
+ * via the loomi MCP), normalised with is_synthetic=false. The post-fix
+ * ("after") state remains the synthetic projected target from prs_post_fix.json.
  */
 
 export async function fetchAutoSegmentCoverage(
   state: DemoState = "before"
 ): Promise<DimensionObject> {
-  if (!isLive()) {
-    console.log("[m1-bloomreach] marketing-mcp-client using synthetic fallback");
-    return normaliseDimension(
-      await loadRawDimension(state, "autosegment_coverage"),
-      true
-    );
+  if (state === "before") {
+    return normaliseDimension(await loomiRawDimension("autosegment_coverage"), false);
   }
-  try {
-    // TODO(live): call Marketing MCP "autosegment coverage" tool.
-    return normaliseDimension(
-      await loadRawDimension(state, "autosegment_coverage"),
-      true
-    );
-  } catch {
-    console.log("[m1-bloomreach] marketing-mcp-client using synthetic fallback");
-    return normaliseDimension(
-      await loadRawDimension(state, "autosegment_coverage"),
-      true
-    );
-  }
+  return normaliseDimension(
+    await loadRawDimension(state, "autosegment_coverage"),
+    true
+  );
 }
 
 export async function fetchSignalFreshness(
   state: DemoState = "before"
 ): Promise<DimensionObject> {
-  if (!isLive()) {
-    console.log("[m1-bloomreach] marketing-mcp-client using synthetic fallback");
-    return normaliseDimension(
-      await loadRawDimension(state, "signal_freshness"),
-      true
-    );
+  if (state === "before") {
+    return normaliseDimension(await loomiRawDimension("signal_freshness"), false);
   }
-  try {
-    // TODO(live): call Marketing MCP "signal freshness" tool.
-    return normaliseDimension(
-      await loadRawDimension(state, "signal_freshness"),
-      true
-    );
-  } catch {
-    console.log("[m1-bloomreach] marketing-mcp-client using synthetic fallback");
-    return normaliseDimension(
-      await loadRawDimension(state, "signal_freshness"),
-      true
-    );
-  }
+  return normaliseDimension(
+    await loadRawDimension(state, "signal_freshness"),
+    true
+  );
 }

@@ -7,7 +7,6 @@ import type {
   DemoState,
   DiscoveryProduct,
   Persona,
-  PersonaEvent,
   PersonaId,
 } from "@/lib/contracts";
 import { BRAND } from "@/lib/brand";
@@ -195,12 +194,24 @@ export function PLPClient({
   );
 }
 
-const EVENT_META: Record<PersonaEvent["type"], { label: string; glyph: string }> = {
+const EVENT_META: Record<string, { label: string; glyph: string }> = {
   page_view: { label: "Viewed", glyph: "◉" },
+  view_item: { label: "Viewed", glyph: "◉" },
+  view_category: { label: "Browsed", glyph: "▦" },
   search: { label: "Searched", glyph: "⌕" },
   wishlist_add: { label: "Wishlisted", glyph: "♡" },
+  cart_update: { label: "Added to cart", glyph: "▣" },
+  checkout: { label: "Checked out", glyph: "▣" },
   purchase: { label: "Purchased", glyph: "✓" },
+  loyalty_update: { label: "Loyalty", glyph: "★" },
+  banner: { label: "Banner", glyph: "▭" },
+  registration: { label: "Registered", glyph: "✦" },
+  consent: { label: "Opted in", glyph: "✎" },
+  survey: { label: "Survey", glyph: "✦" },
+  support_ticket: { label: "Support", glyph: "✉" },
 };
+
+const DEFAULT_EVENT_META = { label: "Event", glyph: "•" };
 
 function eventDate(ts: string): string {
   const d = new Date(ts);
@@ -236,19 +247,22 @@ function JourneyPanel({ persona }: { persona: Persona }) {
         {persona.personalisation_gap ?? persona.profile_description}
       </p>
       <ul className="mt-3 flex flex-wrap gap-2">
-        {journey.map((e, i) => (
-          <li
-            key={i}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-2/50 px-2.5 py-1.5 text-[12px] text-text-body"
-          >
-            <span className="text-accent" aria-hidden>
-              {EVENT_META[e.type].glyph}
-            </span>
-            <span className="font-medium">{EVENT_META[e.type].label}</span>
-            <span className="text-muted">{e.category}</span>
-            <span className="text-faint">· {eventDate(e.timestamp)}</span>
-          </li>
-        ))}
+        {journey.map((e, i) => {
+          const meta = EVENT_META[e.type] ?? DEFAULT_EVENT_META;
+          return (
+            <li
+              key={i}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-2/50 px-2.5 py-1.5 text-[12px] text-text-body"
+            >
+              <span className="text-accent" aria-hidden>
+                {meta.glyph}
+              </span>
+              <span className="font-medium">{meta.label}</span>
+              <span className="text-muted">{e.detail ?? e.category}</span>
+              <span className="text-faint">· {eventDate(e.timestamp)}</span>
+            </li>
+          );
+        })}
       </ul>
     </section>
   );

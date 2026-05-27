@@ -1,95 +1,195 @@
 {
   "_meta": {
-    "description": "Three Bounteous shopper personas for the PPD demo. All use demo_query: 'necklace'. Replaces all prior archetype files.",
+    "description": "Three demo personas, each backed by a REAL wobbly-donkey customer harvested live from Bloomreach Engagement via the loomi MCP (list_customer_events, 2026-05-27). Friendly display names (Elva / Marvin / Jaylon) front the real customers; persona_id is kept stable (guest/sarah/alex) so the app, boost rules and cached-results filenames keep working. All personas use demo_query: 'necklace'. Sandbox emails are NEVER shown in the UI — see real_customer.identifier for provenance only.",
     "brand": "Bounteous",
-    "generated_at": "2026-05-22T00:00:00Z",
-    "version": "2.0"
+    "source": "Bloomreach Engagement (loomi MCP) — list_customer_events on project wobbly-donkey",
+    "fabricated": false,
+    "generated_at": "2026-05-27T00:00:00Z",
+    "version": "3.0"
   },
   "personas": [
     {
       "persona_id": "guest",
-      "display_name": "Guest",
+      "display_name": "Elva",
       "archetype_name": "New Prospecting",
-      "profile_description": "First visit. No login. No purchase history. Browsing broadly. Bloomreach has no BRUID — cannot serve personalised results without cookie.",
-      "login_status": "anonymous",
+      "profile_description": "Real customer with just 2 lifetime events — a push-notification banner impression and a registration, both on 7 Oct 2025. A brand-new account with essentially zero behavioural signal, and no persistent BRUID, so Discovery cannot recognise her across sessions or personalise her results yet.",
+      "login_status": "registered",
       "session_count": 1,
-      "page_views": 3,
+      "page_views": 0,
       "product_clicks": 0,
       "purchase_count": 0,
       "aov": 0,
       "segment_name": "New Prospecting",
-      "last_signal_date": null,
+      "last_signal_date": "2025-10-07",
       "bruid_present": false,
       "bruid_value": null,
       "demo_query": "necklace",
       "plp_before_state": "Bestsellers at top — generic ranking, no personalisation active",
       "plp_after_state": "Bestsellers at top — Rule 3 active (is_bestseller boost for New Prospecting segment)",
-      "personalisation_gap": "Without BRUID, Bloomreach cannot identify this visitor across sessions. Rule 3 targets the segment but BRUID is required for cross-session recognition.",
+      "personalisation_gap": "With only a registration and one banner impression — and no BRUID — Bloomreach has near-zero signal and cannot identify Elva across sessions. Rule 3 targets the segment, but a persistent BRUID is required for cross-session recognition.",
+      "real_customer": {
+        "customer_id": "6a0ded43355ecedd103deb95",
+        "identifier": "elva.gopez@br.demo.hotmail.com",
+        "total_events": 2
+      },
       "journey": [
-        { "type": "page_view", "category": "necklace", "timestamp": "2026-05-25T14:02:00Z" },
-        { "type": "page_view", "category": "earrings", "timestamp": "2026-05-25T14:04:00Z" },
-        { "type": "search", "category": "necklace", "timestamp": "2026-05-25T14:05:00Z" }
+        {
+          "type": "banner",
+          "category": "Onsite banner",
+          "detail": "Push notifications subscription banner (Variant A) shown",
+          "timestamp": "2025-10-07T11:10:28Z"
+        },
+        {
+          "type": "registration",
+          "category": "Account",
+          "detail": "Registered — first identified event",
+          "timestamp": "2025-10-07T11:19:10Z"
+        }
       ]
     },
     {
       "persona_id": "sarah",
-      "display_name": "Sarah",
-      "archetype_name": "Gifting",
-      "profile_description": "4 sessions, browsing gift category. Searching for others, price-sensitive. Last session within 7 days. BRUID present — Bloomreach can recognise and segment her.",
-      "login_status": "anonymous",
-      "session_count": 4,
-      "page_views": 6,
+      "display_name": "Marvin",
+      "archetype_name": "Gifting Intent",
+      "profile_description": "Real customer in Denver, Colorado with 47 lifetime events. His most recent product view was a Cartier 'C de Cartier wedding band' ($2,680) on 29 Aug 2025 — a classic gift — which he has not purchased. He is an active buyer (prior purchases include a $17.99 DressBerry trouser and a $32,700 Cartier 'Love bracelet, diamond-paved') and engages with newsletters and onsite banners. BRUID present, so Discovery can recognise and segment him.",
+      "login_status": "registered",
+      "session_count": 6,
+      "page_views": 11,
       "product_clicks": 4,
-      "purchase_count": 0,
-      "aov": 0,
+      "purchase_count": 2,
+      "aov": 16359,
       "segment_name": "Gifting Intent",
-      "last_signal_date": "2026-05-15",
+      "last_signal_date": "2026-03-28",
       "bruid_present": true,
-      "bruid_value": "_br_uid_2=sarah-gifting-demo-001",
+      "bruid_value": "_br_uid_2=marvin-gifting-demo-001",
       "demo_query": "necklace",
       "plp_before_state": "Generic ranking — Rule 1 INACTIVE, gift products buried",
       "plp_after_state": "Gift sets at top — Rule 1 active (gift_eligible boost for Gifting Intent segment)",
-      "personalisation_gap": "BRUID present, segment assigned. Pre-fix: rule inactive so no personalisation. Post-fix: Rule 1 active, gift products surface at top.",
+      "personalisation_gap": "BRUID present and Marvin is researching a high-end gift (the Cartier wedding band) without converting on it. Pre-fix: Rule 1 inactive, so gift-eligible products stay buried. Post-fix: Rule 1 active and gift products surface at the top of his results.",
+      "real_customer": {
+        "customer_id": "6a0ded42355ecedd103deb55",
+        "identifier": "marvin.bruemmer@br.demo.gmail.com",
+        "location": "Denver, Colorado, USA",
+        "total_events": 47
+      },
       "journey": [
-        { "type": "search", "category": "gift", "timestamp": "2026-05-09T19:20:00Z" },
-        { "type": "page_view", "category": "necklace", "timestamp": "2026-05-09T19:22:00Z" },
-        { "type": "page_view", "category": "necklace", "timestamp": "2026-05-11T20:05:00Z" },
-        { "type": "page_view", "category": "earrings", "timestamp": "2026-05-11T20:08:00Z" },
-        { "type": "wishlist_add", "category": "necklace", "timestamp": "2026-05-11T20:10:00Z" },
-        { "type": "page_view", "category": "bracelet", "timestamp": "2026-05-13T18:40:00Z" },
-        { "type": "page_view", "category": "necklace", "timestamp": "2026-05-13T18:43:00Z" },
-        { "type": "wishlist_add", "category": "bracelet", "timestamp": "2026-05-15T21:02:00Z" },
-        { "type": "page_view", "category": "necklace", "timestamp": "2026-05-15T21:05:00Z" }
+        {
+          "type": "purchase",
+          "category": "Apparel / women / pants",
+          "detail": "DressBerry trousers — $17.99 (PayPal)",
+          "timestamp": "2025-06-10T21:56:33Z"
+        },
+        {
+          "type": "purchase",
+          "category": "Jewelery / bracelets",
+          "detail": "Cartier 'Love bracelet, diamond-paved' — $32,700 (card)",
+          "timestamp": "2025-08-13T01:18:51Z"
+        },
+        {
+          "type": "view_category",
+          "category": "Jewelery / women",
+          "detail": "Browsed women's jewellery",
+          "timestamp": "2025-08-29T19:30:00Z"
+        },
+        {
+          "type": "view_item",
+          "category": "Jewelery / rings",
+          "detail": "Cartier 'C de Cartier wedding band' — $2,680 (not purchased)",
+          "timestamp": "2025-08-29T19:46:31Z"
+        },
+        {
+          "type": "view_item",
+          "category": "Apparel / women / tops",
+          "detail": "Jockey thermal top — $6.79",
+          "timestamp": "2026-01-02T00:48:16Z"
+        },
+        {
+          "type": "banner",
+          "category": "Onsite banner",
+          "detail": "'Free delivery' banner — clicked",
+          "timestamp": "2026-01-02T00:36:09Z"
+        },
+        {
+          "type": "banner",
+          "category": "Onsite banner",
+          "detail": "'Onexit banner with last viewed items' — closed",
+          "timestamp": "2026-03-28T08:45:11Z"
+        },
+        {
+          "type": "view_category",
+          "category": "Apparel / women / jeans",
+          "detail": "Browsed jeans",
+          "timestamp": "2026-03-28T09:25:44Z"
+        }
       ]
     },
     {
       "persona_id": "alex",
-      "display_name": "Alex",
+      "display_name": "Jaylon",
       "archetype_name": "High Value Returning",
-      "profile_description": "12 sessions, 3 purchases, AOV £220. Consistent premium browsing, new arrivals affinity. BRUID present. Bloomreach has rich signal history.",
-      "login_status": "logged_in",
-      "session_count": 12,
-      "page_views": 48,
-      "product_clicks": 22,
-      "purchase_count": 3,
-      "aov": 220,
+      "profile_description": "Real customer and returning, identified shopper. Completed a $186.98 purchase (LUXURAZI suit) via Apple Pay on 23 May 2025, earned Gold loyalty status (210 pts), and left a positive post-purchase survey ('I love my purchase'). BRUID present with a complete, recent funnel (browse → cart → checkout → purchase) — the gold-standard personalisation contrast against Elva.",
+      "login_status": "registered",
+      "session_count": 2,
+      "page_views": 4,
+      "product_clicks": 1,
+      "purchase_count": 1,
+      "aov": 186.98,
       "segment_name": "High Value Returning",
-      "last_signal_date": "2026-05-20",
+      "last_signal_date": "2025-05-24",
       "bruid_present": true,
-      "bruid_value": "_br_uid_2=alex-highvalue-demo-002",
+      "bruid_value": "_br_uid_2=jaylon-highvalue-demo-002",
       "demo_query": "necklace",
       "plp_before_state": "Generic ranking — Rule 2 INACTIVE, premium/new arrivals not surfaced",
       "plp_after_state": "Premium and new arrivals at top — Rule 2 active (is_new_arrival OR price_band=premium boost for High Value Returning segment)",
-      "personalisation_gap": "Strong BRUID + 3 segment memberships + fresh signals. Pre-fix: rule inactive. Post-fix: full 1:1 personalisation active — this is the gold standard contrast against Guest.",
+      "personalisation_gap": "Strong BRUID + completed purchase + loyalty membership + a positive survey. Pre-fix: Rule 2 inactive. Post-fix: full 1:1 personalisation active — premium and new-arrival products surface at the top.",
+      "real_customer": {
+        "customer_id": "6a0ded44355ecedd103debda",
+        "identifier": "jaylon.shinoda@br.demo.mailbox.org",
+        "total_events": 24
+      },
       "journey": [
-        { "type": "page_view", "category": "necklace", "timestamp": "2026-05-08T10:15:00Z" },
-        { "type": "purchase", "category": "necklace", "timestamp": "2026-05-08T10:40:00Z" },
-        { "type": "page_view", "category": "ring", "timestamp": "2026-05-12T09:30:00Z" },
-        { "type": "page_view", "category": "necklace", "timestamp": "2026-05-12T09:35:00Z" },
-        { "type": "wishlist_add", "category": "necklace", "timestamp": "2026-05-12T09:38:00Z" },
-        { "type": "purchase", "category": "earrings", "timestamp": "2026-05-16T13:12:00Z" },
-        { "type": "page_view", "category": "necklace", "timestamp": "2026-05-20T11:50:00Z" },
-        { "type": "purchase", "category": "necklace", "timestamp": "2026-05-20T12:05:00Z" }
+        {
+          "type": "view_category",
+          "category": "Apparel / men / jackets",
+          "detail": "Browsed men's jackets",
+          "timestamp": "2025-05-23T16:32:26Z"
+        },
+        {
+          "type": "view_item",
+          "category": "Apparel / men / jackets",
+          "detail": "LUXURAZI Men Grey Checked Slim Fit Suit — $186.98",
+          "timestamp": "2025-05-23T17:12:26Z"
+        },
+        {
+          "type": "cart_update",
+          "category": "Cart",
+          "detail": "Added LUXURAZI suit (size M)",
+          "timestamp": "2025-05-23T17:30:44Z"
+        },
+        {
+          "type": "checkout",
+          "category": "Checkout",
+          "detail": "Checked out LUXURAZI suit",
+          "timestamp": "2025-05-23T18:04:41Z"
+        },
+        {
+          "type": "purchase",
+          "category": "Apparel / men / jackets",
+          "detail": "Purchased LUXURAZI suit — $186.98 (Apple Pay)",
+          "timestamp": "2025-05-23T18:26:57Z"
+        },
+        {
+          "type": "loyalty_update",
+          "category": "Loyalty",
+          "detail": "Earned points → Gold status (210 pts)",
+          "timestamp": "2025-05-23T19:33:05Z"
+        },
+        {
+          "type": "survey",
+          "category": "Post-purchase NPS",
+          "detail": "'I love my purchase. Delivery could be faster though.'",
+          "timestamp": "2025-05-24T00:35:45Z"
+        }
       ]
     }
   ]

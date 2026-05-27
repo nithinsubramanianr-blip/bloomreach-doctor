@@ -6,10 +6,13 @@ import type { FixObject, FixResult, PRSState } from "@/lib/contracts";
  *
  * Algorithm:
  *   1. Sort dimensions by score ASC, tiebreak by dimension_id ASC.
- *   2. Take the bottom 3 dimensions that still have room to improve (score < 20).
- *   3. Map each to its fix in fix_catalogue.json (by dimension_linked).
- *   4. Sort the mapped fixes by estimated_rpv_lift_pct_max DESC.
- *   5. Assign position 1/2/3.
+ *   2. Walk that order and collect the dimensions that (a) still have room to
+ *      improve (score < 20) AND (b) have a fix in fix_catalogue.json, until we
+ *      have up to 3. A worst-scoring dimension with no catalogue remediation
+ *      (e.g. signal_freshness) is skipped so it does not crowd out an
+ *      actionable fix — the list always surfaces the worst *fixable* gaps.
+ *   3. Sort the mapped fixes by estimated_rpv_lift_pct_max DESC.
+ *   4. Assign position 1/2/3.
  *
  * fix_catalogue.json is the one permitted data/ import in M2 (it is fixture
  * data, not a raw API response). Imported statically to keep this pure & sync.
@@ -18,20 +21,23 @@ import type { FixObject, FixResult, PRSState } from "@/lib/contracts";
 const CATALOGUE: FixObject[] = (fixCatalogueData as { fixes: FixObject[] }).fixes;
 
 export function generateFixList(prs: PRSState): FixResult[] {
-  const improvable = prs.dimensions
+  const ranked = prs.dimensions
     .filter((d) => d.score < d.max_score)
     .sort(
       (a, b) =>
         a.score - b.score || a.dimension_id.localeCompare(b.dimension_id)
-    )
-    .slice(0, 3);
-
-  const mapped = improvable
-    .map((d) => CATALOGUE.find((f) => f.dimension_linked === d.dimension_id))
-    .filter((f): f is FixObject => Boolean(f))
-    .sort(
-      (a, b) => b.estimated_rpv_lift_pct_max - a.estimated_rpv_lift_pct_max
     );
+
+  const mapped: FixObject[] = [];
+  for (const d of ranked) {
+    if (mapped.length === 3) break;
+    const fix = CATALOGUE.find((f) => f.dimension_linked === d.dimension_id);
+    if (fix) mapped.push(fix);
+  }
+
+  mapped.sort(
+    (a, b) => b.estimated_rpv_lift_pct_max - a.estimated_rpv_lift_pct_max
+  );
 
   return mapped.map((f, index) => ({
     position: (index + 1) as 1 | 2 | 3,
