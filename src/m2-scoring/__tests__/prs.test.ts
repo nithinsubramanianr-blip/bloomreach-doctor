@@ -20,40 +20,48 @@ const postFixDimensions = postFix.dimensions as DimensionObject[];
 // ---------------------------------------------------------------------------
 
 describe("PRS mandatory tests", () => {
-  it("Test 1 — REAL pre-fix state scores 28 Red from MCP-harvested values", () => {
+  it("Test 1 — REAL pre-fix scores 3 Red from the 3 Engagement MCP dims (BRUID + Rule Conflicts out of scope, excluded)", () => {
     const result = calculatePRS(preFixDimensions);
-    // 8 (bruid*) + 0 (autosegment) + 2 (freshness) + 18 (rule_conflicts*) + 0 (ab) = 28
-    // (* = Discovery placeholder; the three MCP dims are the real harvested values)
-    expect(result.composite_score).toBe(28);
+    // Composite is the 3 in-scope dims only, rescaled to 0–100:
+    // round((0 autosegment + 2 freshness + 0 ab) / 60 * 100) = 3
+    expect(result.composite_score).toBe(3);
     expect(result.rag_status).toBe("red");
 
     const dim = (id: string) =>
       result.dimensions.find((d) => d.dimension_id === id);
+
+    // The two Discovery dimensions are OUT OF SCOPE (Discovery not enabled for
+    // this sandbox) and excluded, so their values no longer inflate the score.
+    expect(dim("bruid_match_rate")?.status).toBe("out_of_scope");
+    expect(dim("bruid_match_rate")?.out_of_scope).toBe(true);
+    expect(dim("rule_conflicts")?.status).toBe("out_of_scope");
+    expect(dim("rule_conflicts")?.out_of_scope).toBe(true);
 
     // Real MCP dimensions — show 0 where it is 0, no fabrication.
     expect(dim("autosegment_coverage")?.score).toBe(0);
     expect(dim("ab_test_coverage")?.score).toBe(0);
     expect(dim("signal_freshness")?.score).toBe(2); // round(0.1056 * 20)
 
-    // All three real MCP dimensions are critical; so is the BRUID placeholder.
-    expect(dim("bruid_match_rate")?.status).toBe("critical");
+    // All three live MCP dimensions are critical.
     expect(dim("autosegment_coverage")?.status).toBe("critical");
     expect(dim("ab_test_coverage")?.status).toBe("critical");
     expect(dim("signal_freshness")?.status).toBe("critical");
   });
 
-  it("Test 2 — post-fix state scores 70 Amber with AutoSegment & ABTest healthy", () => {
+  it("Test 2 — post-fix scores 77 Green from the 3 Engagement MCP dims (BRUID + Rule Conflicts out of scope)", () => {
     const result = calculatePRS(postFixDimensions);
-    expect(result.composite_score).toBe(70);
-    expect(result.rag_status).toBe("amber");
-    expect(
-      result.dimensions.find((d) => d.dimension_id === "autosegment_coverage")
-        ?.status
-    ).toBe("healthy");
-    expect(
-      result.dimensions.find((d) => d.dimension_id === "ab_test_coverage")
-        ?.status
-    ).toBe("healthy");
+    // round((16 autosegment + 14 freshness + 16 ab) / 60 * 100) = 77
+    expect(result.composite_score).toBe(77);
+    expect(result.rag_status).toBe("green");
+
+    const dim = (id: string) =>
+      result.dimensions.find((d) => d.dimension_id === id);
+
+    expect(dim("autosegment_coverage")?.status).toBe("healthy");
+    expect(dim("ab_test_coverage")?.status).toBe("healthy");
+    // The Discovery dimensions remain out of scope and out of the composite here too.
+    expect(dim("bruid_match_rate")?.status).toBe("out_of_scope");
+    expect(dim("rule_conflicts")?.status).toBe("out_of_scope");
   });
 
   it("Test 3 — fix list from pre-fix ranks AutoSegment, BRUID, A/B Coverage", () => {

@@ -11,8 +11,9 @@ import { calculatePRS } from "@/m2-scoring/prs-calculator";
  *
  * The M1 -> M2 -> M4 assembly point. Server-only: fetches the 5 normalised
  * dimensions, computes the composite PRS, attaches the ranked fix list, and
- * stamps the boost-rule state. `before` -> 28 Red (real MCP-harvested pre-fix
- * values for the three MCP dimensions), `after` -> 70 Amber (synthetic target).
+ * stamps the boost-rule state. The composite uses only the 3 live MCP
+ * dimensions; BRUID Match Rate and Rule Conflicts are out of scope (Discovery
+ * not enabled for this sandbox) and excluded. `before` -> 3 Red, `after` -> 77 Green.
  */
 export async function GET(request: NextRequest) {
   const state: DemoState =

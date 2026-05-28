@@ -123,7 +123,7 @@ export function ProductCard({
         </h3>
         <div className="mt-2.5 flex items-center justify-between gap-2">
           <span className="text-[15px] font-semibold text-text max-md:text-[14px]">
-            £{product.price.toFixed(2)}
+            ${product.price.toFixed(2)}
           </span>
           {product.affinity && (
             <span

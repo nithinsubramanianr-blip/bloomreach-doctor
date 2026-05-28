@@ -113,6 +113,9 @@ export function normaliseDimension(
     data_source: dataSource as DataSource,
     is_synthetic: isSynthetic,
     timestamp,
+    // A dimension that is out of scope for the hackathon (the Discovery
+    // dimensions): shown as "not in scope" and excluded from the composite.
+    out_of_scope: obj.out_of_scope === true ? true : undefined,
     // pass through optional display context when present
     raw_label: typeof obj.raw_label === "string" ? obj.raw_label : undefined,
     target_value:

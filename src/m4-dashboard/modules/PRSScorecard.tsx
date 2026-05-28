@@ -19,18 +19,28 @@ const STATUS_DOT: Record<DimensionStatus, string> = {
   critical: "bg-red",
   warning: "bg-amber",
   healthy: "bg-green",
+  out_of_scope: "bg-faint",
 };
 
 const STATUS_TEXT: Record<DimensionStatus, string> = {
   critical: "text-red",
   warning: "text-amber",
   healthy: "text-green",
+  out_of_scope: "text-faint",
 };
 
 const STATUS_BAR: Record<DimensionStatus, string> = {
   critical: "bg-red",
   warning: "bg-amber",
   healthy: "bg-green",
+  out_of_scope: "bg-faint",
+};
+
+const STATUS_LABEL: Record<DimensionStatus, string> = {
+  critical: "critical",
+  warning: "warning",
+  healthy: "healthy",
+  out_of_scope: "not in scope",
 };
 
 interface PRSScorecardProps {
@@ -66,6 +76,10 @@ export function PRSScorecard({
               timeStyle: "short",
             })}
           </p>
+          <p className="mt-2 text-center text-[11px] leading-relaxed text-faint">
+            Scored on 3 of 5 dimensions — BRUID Match Rate &amp; Rule Conflicts
+            are infrastructure scope (90-day Discovery roadmap), not this demo.
+          </p>
           <button
             type="button"
             onClick={onToggleBoostRules}
@@ -92,9 +106,16 @@ export function PRSScorecard({
         </section>
 
         <section className="animate-rise shadow-panel rounded-2xl border border-border bg-surface p-4 md:p-6">
-          <div className="mb-5 flex items-baseline justify-between gap-3">
-            <h2 className="text-xl font-semibold text-text">Five dimensions</h2>
-            <span className="text-[12px] text-faint">Each scored 0–20</span>
+          <div className="mb-5">
+            <div className="flex items-baseline justify-between gap-3">
+              <h2 className="text-xl font-semibold text-text">Five dimensions</h2>
+              <span className="text-[12px] text-faint">Each scored 0–20</span>
+            </div>
+            <p className="mt-1 text-[12px] text-faint">
+              Score is computed from the 3 Engagement MCP dimensions. BRUID Match
+              Rate and Rule Conflicts are not in scope — Discovery is not enabled
+              for this hackathon sandbox.
+            </p>
           </div>
           <ul className="divide-y divide-border">
             {prsState.dimensions.map((d) => (
@@ -123,8 +144,10 @@ export function PRSScorecard({
 }
 
 function DimensionRow({ dimension }: { dimension: ScoredDimension }) {
-  const pct = (dimension.score / dimension.max_score) * 100;
+  const outOfScope = dimension.status === "out_of_scope";
+  const pct = outOfScope ? 0 : (dimension.score / dimension.max_score) * 100;
   const improved =
+    !outOfScope &&
     typeof dimension.change_from_pre_fix === "number" &&
     dimension.change_from_pre_fix > 0;
 
@@ -132,7 +155,7 @@ function DimensionRow({ dimension }: { dimension: ScoredDimension }) {
     <li
       className={`flex flex-col gap-2 py-3.5 first:pt-0 last:pb-0 ${
         improved ? "improve-pulse rounded-lg px-2 -mx-2" : ""
-      }`}
+      } ${outOfScope ? "opacity-70" : ""}`}
     >
       <div className="flex items-start justify-between gap-3 max-md:flex-col max-md:gap-2">
         <div className="min-w-0">
@@ -150,19 +173,28 @@ function DimensionRow({ dimension }: { dimension: ScoredDimension }) {
             )}
           </div>
           <p className="mt-0.5 pl-4 text-[12px] text-faint">
-            {SOURCE_LABEL[dimension.data_source]} ·{" "}
-            {Math.round(dimension.raw_value * 100)}% raw
+            {outOfScope
+              ? `${SOURCE_LABEL[dimension.data_source]} · not enabled for this sandbox — excluded from score`
+              : `${SOURCE_LABEL[dimension.data_source]} · ${Math.round(
+                  dimension.raw_value * 100
+                )}% raw`}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-3 max-md:w-full max-md:justify-between max-md:pl-4">
           <span
             className={`text-[12px] font-semibold capitalize ${STATUS_TEXT[dimension.status]}`}
           >
-            {dimension.status}
+            {STATUS_LABEL[dimension.status]}
           </span>
           <span className="text-lg font-semibold text-text">
-            {dimension.score}
-            <span className="text-[13px] font-normal text-faint">/20</span>
+            {outOfScope ? (
+              <span className="text-faint">—</span>
+            ) : (
+              <>
+                {dimension.score}
+                <span className="text-[13px] font-normal text-faint">/20</span>
+              </>
+            )}
           </span>
         </div>
       </div>

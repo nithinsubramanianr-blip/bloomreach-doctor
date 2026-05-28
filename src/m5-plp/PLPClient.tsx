@@ -29,9 +29,9 @@ const PRICE_BANDS: {
   test: (p: DiscoveryProduct) => boolean;
 }[] = [
   { id: "all", label: "All prices", test: () => true },
-  { id: "lt75", label: "Under £75", test: (p) => p.price < 75 },
-  { id: "75to200", label: "£75–£200", test: (p) => p.price >= 75 && p.price <= 200 },
-  { id: "gt200", label: "Over £200", test: (p) => p.price > 200 },
+  { id: "lt75", label: "Under $75", test: (p) => p.price < 75 },
+  { id: "75to200", label: "$75–$200", test: (p) => p.price >= 75 && p.price <= 200 },
+  { id: "gt200", label: "Over $200", test: (p) => p.price > 200 },
 ];
 
 function titleCase(s: string): string {

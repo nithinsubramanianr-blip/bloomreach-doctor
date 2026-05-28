@@ -17,7 +17,11 @@ export type DimensionId =
   | "rule_conflicts"
   | "ab_test_coverage";
 
-export type DimensionStatus = "critical" | "warning" | "healthy";
+export type DimensionStatus =
+  | "critical"
+  | "warning"
+  | "healthy"
+  | "out_of_scope";
 
 export type DataSource = "discovery_api" | "marketing_mcp" | "analytics_mcp";
 
@@ -45,6 +49,13 @@ export interface DimensionObject {
   data_source: DataSource;
   is_synthetic: boolean;
   timestamp: string; // ISO8601
+  /**
+   * When true, this dimension is OUT OF SCOPE for the hackathon (the two
+   * Discovery dimensions — Discovery is not enabled for this sandbox). It is
+   * shown as "not in scope" in the UI and EXCLUDED from the composite PRS so its
+   * placeholder value cannot inflate or contradict the score.
+   */
+  out_of_scope?: boolean;
   // Optional context present in the /data files:
   raw_label?: string;
   target_value?: number;
@@ -98,6 +109,8 @@ export interface ScoredDimension {
   status: DimensionStatus;
   data_source: DataSource;
   explanation: string;
+  /** True when the dimension is out of scope (Discovery not enabled) — excluded from the composite. */
+  out_of_scope?: boolean;
   raw_label?: string;
   target_value?: number;
   target_label?: string;
@@ -220,7 +233,7 @@ export interface Product {
   name: string;
   description: string;
   price: number;
-  currency: "GBP";
+  currency: "USD";
   category: string;
   price_band: "entry" | "mid" | "premium";
   gift_eligible: boolean;
@@ -252,7 +265,7 @@ export interface DiscoveryProduct {
   product_id: string;
   name: string;
   price: number;
-  currency: "GBP";
+  currency: "USD";
   category: string;
   rank_position: number; // 1-based
   is_personalised: boolean;

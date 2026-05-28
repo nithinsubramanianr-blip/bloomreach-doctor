@@ -25,7 +25,7 @@ const PRE_LOADED_EXCHANGE: AgentResponse = {
     {
       tool_name: "fetchBRUIDMatchRate",
       tool_input: {},
-      tool_output_summary: "22% of sessions recognised — Discovery placeholder, not yet wired",
+      tool_output_summary: "Not in scope — Discovery not enabled for this sandbox, excluded from the score",
     },
     {
       tool_name: "fetchAutoSegmentCoverage",
@@ -41,7 +41,7 @@ const PRE_LOADED_EXCHANGE: AgentResponse = {
     {
       tool_name: "fetchRuleConflicts",
       tool_input: {},
-      tool_output_summary: "95% conflict-free — Discovery placeholder, not yet wired",
+      tool_output_summary: "Not in scope — Discovery not enabled for this sandbox, excluded from the score",
     },
     {
       tool_name: "fetchABTestCoverage",
@@ -51,9 +51,9 @@ const PRE_LOADED_EXCHANGE: AgentResponse = {
   ],
   llm_response: {
     summary_sentence:
-      "Your personalisation is scoring 28/100 (red) — the foundation isn't in place yet: there are no audience segments and no A/B tests.",
+      "Your personalisation is scoring 3/100 (red) — the foundation isn't in place yet: there are no audience segments and no A/B tests.",
     score_breakdown:
-      "AutoSegment coverage is 0% — 0 segmentations exist in the project. A/B coverage is 0% — 0 experiments are configured. Signal freshness is 10.6% — only 13,010 of 123,164 customers were active in the last 90 days, though the most recent event is from today. BRUID match (22%) and rule conflicts (95% conflict-free) are Discovery placeholders pending wiring.",
+      "AutoSegment coverage is 0% — 0 segmentations exist in the project. A/B coverage is 0% — 0 experiments are configured. Signal freshness is 10.6% — only 13,010 of 123,164 customers were active in the last 90 days, though the most recent event is from today. The score reflects only these three Engagement MCP dimensions: BRUID Match Rate and Rule Conflicts are not in scope — Discovery is not enabled for this hackathon sandbox (infrastructure, 90-day roadmap) — so they are excluded from the composite.",
     top_3_fixes: [
       "Create 3 manual audience segments (12–18% RPV lift on targeted visitors)",
       "Enable BRUID persistence for guest sessions (8–15% RPV lift on returning visitors)",
@@ -68,8 +68,8 @@ const PRE_LOADED_EXCHANGE: AgentResponse = {
 const PERSONA_OPTIONS = [
   { value: "", label: "All shoppers" },
   { value: "guest", label: "Elva — New Prospecting" },
-  { value: "sarah", label: "Marvin — Gifting Intent" },
-  { value: "alex", label: "Jaylon — High Value Returning" },
+  { value: "sarah", label: "Jakob — Gifting Intent" },
+  { value: "alex", label: "Marvin — High Value Returning" },
 ];
 
 export function NLChat() {

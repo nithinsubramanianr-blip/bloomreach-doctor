@@ -8,7 +8,7 @@ import type {
   PersonaId,
   Product,
 } from "@/lib/contracts";
-import { loadCachedResult, loadProducts } from "./synthetic-loader";
+import { loadCachedResult, loadCatalog } from "./synthetic-loader";
 
 /**
  * Deterministic synthetic Discovery search.
@@ -63,7 +63,7 @@ function toDiscoveryProduct(
     product_id: p.product_id,
     name: p.name,
     price: p.price,
-    currency: "GBP",
+    currency: "USD",
     category: p.category,
     rank_position: rank,
     is_personalised: personalised,
@@ -90,7 +90,7 @@ export async function syntheticSearch(
     return { ...populated, cached: true, cache_key: cacheKey };
   }
 
-  const all = await loadProducts();
+  const all = await loadCatalog();
 
   // Base generic ranking — identical for every persona ("before").
   const ranked = [...all].sort(genericComparator);

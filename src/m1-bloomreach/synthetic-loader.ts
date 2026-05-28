@@ -71,6 +71,17 @@ export async function loadProducts(): Promise<Product[]> {
   return data.products;
 }
 
+/**
+ * Loads the REAL Bloomreach product catalogue (data/catalog.json), harvested
+ * from the `bounteous_fashion_jewellery_product` catalog via the loomi MCP.
+ * This is the live source the PLP / Shopper Simulator render. Same shape as
+ * loadProducts(), so it is a drop-in replacement for the synthetic catalogue.
+ */
+export async function loadCatalog(): Promise<Product[]> {
+  const data = await readJson<{ products: Product[] }>("catalog.json");
+  return data.products;
+}
+
 export async function loadSegments(): Promise<Segment[]> {
   const data = await readJson<{ segments: Segment[] }>("segments.json");
   return data.segments;
