@@ -41,7 +41,17 @@ export type Intent =
 const INTENT_PATTERNS: Record<Intent, RegExp[]> = {
   diagnosis: [/why.*not working/i, /what.*wrong/i, /personalisation.*broken/i, /diagnos/i],
   "fix-request": [/what.*fix/i, /how.*improve/i, /what.*do first/i, /recommend/i],
-  "dimension-drill": [/bruid/i, /autosegment/i, /signal freshness/i, /rule conflict/i, /a\/b test/i],
+  "dimension-drill": [
+    /bruid/i,
+    /autosegment/i,
+    /signal freshness/i,
+    /rule conflict/i,
+    /a\/b test/i,
+    /segment.*(quality|definition)/i,
+    /profile.*(complet|enrich)/i,
+    /behaviou?ral.*(signal|richness)/i,
+    /event types?/i,
+  ],
   "archetype-compare": [/customer type/i, /persona/i, /segment/i, /shopper/i, /archetype/i],
 };
 
@@ -58,6 +68,9 @@ const FETCHER_NAME: Record<DimensionId, string> = {
   signal_freshness: "fetchSignalFreshness",
   rule_conflicts: "fetchRuleConflicts",
   ab_test_coverage: "fetchABTestCoverage",
+  segment_definition_quality: "fetchSegmentDefinitionQuality",
+  profile_completeness: "fetchProfileCompleteness",
+  behavioral_signal_richness: "fetchBehavioralSignalRichness",
 };
 
 function traceStep(dimension: ScoredDimension): ReasoningTraceStep {

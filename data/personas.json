@@ -1,11 +1,13 @@
 {
   "_meta": {
-    "description": "Three demo personas, each backed by a REAL wobbly-donkey customer harvested live from Bloomreach Engagement via the loomi MCP (list_customer_events, 2026-05-27). Friendly display names (Elva / Marvin / Jaylon) front the real customers; persona_id is kept stable (guest/sarah/alex) so the app, boost rules and cached-results filenames keep working. All personas use demo_query: 'necklace'. Sandbox emails are NEVER shown in the UI — see real_customer.identifier for provenance only.",
+    "description": "Three demo personas, each backed by a REAL wobbly-donkey customer harvested live from Bloomreach Engagement via the loomi MCP (list_customer_events). Friendly display names (Elva / Jakob / Marvin) front the real customers; persona_id is kept stable (guest/sarah/alex) so the app, boost rules and cached-results filenames keep working. All personas use demo_query: 'necklace'. Sandbox emails are NEVER shown in the UI — see real_customer.identifier for provenance only.",
     "brand": "Bounteous",
     "source": "Bloomreach Engagement (loomi MCP) — list_customer_events on project wobbly-donkey",
     "fabricated": false,
-    "generated_at": "2026-05-27T00:00:00Z",
-    "version": "3.0"
+    "generated_at": "2026-05-28T00:00:00Z",
+    "version": "4.0",
+    "recast_note": "v4: personas recast to match real spend. Marvin moved Gifting Intent -> High Value Returning (he has 2 real purchases incl. a $32,700 Cartier bracelet). Jaylon dropped. New Gifting Intent persona = Jakob Minkus (real customer: viewed a $4,200 Cartier necklace + apparel in the last 90 days, added trousers to cart then abandoned, zero purchases). Elva unchanged.",
+    "persona_id_map": { "guest": "Elva (New Prospecting)", "sarah": "Jakob (Gifting Intent)", "alex": "Marvin (High Value Returning)" }
   },
   "personas": [
     {
@@ -49,23 +51,93 @@
     },
     {
       "persona_id": "sarah",
-      "display_name": "Marvin",
+      "display_name": "Jakob",
       "archetype_name": "Gifting Intent",
-      "profile_description": "Real customer in Denver, Colorado with 47 lifetime events. His most recent product view was a Cartier 'C de Cartier wedding band' ($2,680) on 29 Aug 2025 — a classic gift — which he has not purchased. He is an active buyer (prior purchases include a $17.99 DressBerry trouser and a $32,700 Cartier 'Love bracelet, diamond-paved') and engages with newsletters and onsite banners. BRUID present, so Discovery can recognise and segment him.",
+      "profile_description": "Real customer (Denver) who arrived via a Facebook 'sale' ad on a new mobile install. In a single session he browsed a Cartier 'Cactus de Cartier Necklace' ($4,200) alongside several apparel items, added a pair of trousers to his cart — then left without buying anything. A live, recent gifting-research / cart-abandon signal with zero purchases. BRUID present, so Discovery can recognise and segment him.",
+      "login_status": "identified",
+      "session_count": 1,
+      "page_views": 5,
+      "product_clicks": 5,
+      "purchase_count": 0,
+      "aov": 0,
+      "segment_name": "Gifting Intent",
+      "last_signal_date": "2026-04-30",
+      "bruid_present": true,
+      "bruid_value": "_br_uid_2=jakob-gifting-demo-001",
+      "demo_query": "necklace",
+      "plp_before_state": "Generic ranking — Rule 1 INACTIVE, gift products buried",
+      "plp_after_state": "Gift sets at top — Rule 1 active (gift_eligible boost for Gifting Intent segment)",
+      "personalisation_gap": "BRUID present and Jakob is showing clear gifting intent — browsing a high-end Cartier necklace and abandoning a cart — without converting. Pre-fix: Rule 1 inactive, so gift-eligible products stay buried. Post-fix: Rule 1 active and gift products surface at the top of his results.",
+      "real_customer": {
+        "customer_id": "6a0e95dc18e80c1e615e1373",
+        "identifier": "jakob.minkus@br.demo.yahoo.com",
+        "location": "Denver, Colorado, USA",
+        "total_events": 17
+      },
+      "journey": [
+        {
+          "type": "banner",
+          "category": "Onsite banner",
+          "detail": "'Discount countdown' in-app banner — clicked",
+          "timestamp": "2026-04-30T16:58:56Z"
+        },
+        {
+          "type": "view_item",
+          "category": "Jewelery / necklaces",
+          "detail": "Cartier 'Cactus de Cartier Necklace' — $4,200 (not purchased)",
+          "timestamp": "2026-04-30T17:16:03Z"
+        },
+        {
+          "type": "view_item",
+          "category": "Apparel / women / tights",
+          "detail": "Puma summer tights — $19.99",
+          "timestamp": "2026-04-30T17:47:39Z"
+        },
+        {
+          "type": "view_item",
+          "category": "Apparel / women",
+          "detail": "Qurvii top — $24.95",
+          "timestamp": "2026-04-30T17:50:43Z"
+        },
+        {
+          "type": "view_item",
+          "category": "Apparel / men / pants",
+          "detail": "Mr Bowerbird men's jeans — $23.98",
+          "timestamp": "2026-04-30T18:24:06Z"
+        },
+        {
+          "type": "view_item",
+          "category": "Apparel / women / pants",
+          "detail": "DressBerry trousers — $17.99",
+          "timestamp": "2026-04-30T18:30:57Z"
+        },
+        {
+          "type": "cart_update",
+          "category": "Cart",
+          "detail": "Added DressBerry trousers — abandoned, no purchase",
+          "timestamp": "2026-04-30T19:03:30Z"
+        }
+      ]
+    },
+    {
+      "persona_id": "alex",
+      "display_name": "Marvin",
+      "archetype_name": "High Value Returning",
+      "profile_description": "Real customer in Denver, Colorado with 47 lifetime events and two completed purchases — a $17.99 DressBerry trouser and, notably, a $32,700 Cartier 'Love bracelet, diamond-paved'. A loyalty member with post-purchase lifecycle engagement (NPS), he is by spend the highest-value customer in the demo cast. He also browses high-end jewellery (most recently a Cartier wedding band). BRUID present with a rich signal history — the gold-standard personalisation contrast against Elva.",
       "login_status": "registered",
       "session_count": 6,
       "page_views": 11,
       "product_clicks": 4,
       "purchase_count": 2,
       "aov": 16359,
-      "segment_name": "Gifting Intent",
+      "segment_name": "High Value Returning",
       "last_signal_date": "2026-03-28",
       "bruid_present": true,
-      "bruid_value": "_br_uid_2=marvin-gifting-demo-001",
+      "bruid_value": "_br_uid_2=marvin-highvalue-demo-002",
       "demo_query": "necklace",
-      "plp_before_state": "Generic ranking — Rule 1 INACTIVE, gift products buried",
-      "plp_after_state": "Gift sets at top — Rule 1 active (gift_eligible boost for Gifting Intent segment)",
-      "personalisation_gap": "BRUID present and Marvin is researching a high-end gift (the Cartier wedding band) without converting on it. Pre-fix: Rule 1 inactive, so gift-eligible products stay buried. Post-fix: Rule 1 active and gift products surface at the top of his results.",
+      "plp_before_state": "Generic ranking — Rule 2 INACTIVE, premium/new arrivals not surfaced",
+      "plp_after_state": "Premium and new arrivals at top — Rule 2 active (is_new_arrival OR price_band=premium boost for High Value Returning segment)",
+      "personalisation_gap": "Strong BRUID + two completed purchases (incl. a $32,700 Cartier piece) + loyalty membership + a high affinity for premium jewellery. Pre-fix: Rule 2 inactive. Post-fix: full 1:1 personalisation active — premium and new-arrival products surface at the top.",
       "real_customer": {
         "customer_id": "6a0ded42355ecedd103deb55",
         "identifier": "marvin.bruemmer@br.demo.gmail.com",
@@ -80,21 +152,21 @@
           "timestamp": "2025-06-10T21:56:33Z"
         },
         {
+          "type": "loyalty_update",
+          "category": "Loyalty",
+          "detail": "Earned points → Gold status (210 pts)",
+          "timestamp": "2025-06-10T22:57:11Z"
+        },
+        {
           "type": "purchase",
           "category": "Jewelery / bracelets",
           "detail": "Cartier 'Love bracelet, diamond-paved' — $32,700 (card)",
           "timestamp": "2025-08-13T01:18:51Z"
         },
         {
-          "type": "view_category",
-          "category": "Jewelery / women",
-          "detail": "Browsed women's jewellery",
-          "timestamp": "2025-08-29T19:30:00Z"
-        },
-        {
           "type": "view_item",
           "category": "Jewelery / rings",
-          "detail": "Cartier 'C de Cartier wedding band' — $2,680 (not purchased)",
+          "detail": "Cartier 'C de Cartier wedding band' — $2,680 (browsed, not purchased)",
           "timestamp": "2025-08-29T19:46:31Z"
         },
         {
@@ -110,85 +182,10 @@
           "timestamp": "2026-01-02T00:36:09Z"
         },
         {
-          "type": "banner",
-          "category": "Onsite banner",
-          "detail": "'Onexit banner with last viewed items' — closed",
-          "timestamp": "2026-03-28T08:45:11Z"
-        },
-        {
           "type": "view_category",
           "category": "Apparel / women / jeans",
           "detail": "Browsed jeans",
           "timestamp": "2026-03-28T09:25:44Z"
-        }
-      ]
-    },
-    {
-      "persona_id": "alex",
-      "display_name": "Jaylon",
-      "archetype_name": "High Value Returning",
-      "profile_description": "Real customer and returning, identified shopper. Completed a $186.98 purchase (LUXURAZI suit) via Apple Pay on 23 May 2025, earned Gold loyalty status (210 pts), and left a positive post-purchase survey ('I love my purchase'). BRUID present with a complete, recent funnel (browse → cart → checkout → purchase) — the gold-standard personalisation contrast against Elva.",
-      "login_status": "registered",
-      "session_count": 2,
-      "page_views": 4,
-      "product_clicks": 1,
-      "purchase_count": 1,
-      "aov": 186.98,
-      "segment_name": "High Value Returning",
-      "last_signal_date": "2025-05-24",
-      "bruid_present": true,
-      "bruid_value": "_br_uid_2=jaylon-highvalue-demo-002",
-      "demo_query": "necklace",
-      "plp_before_state": "Generic ranking — Rule 2 INACTIVE, premium/new arrivals not surfaced",
-      "plp_after_state": "Premium and new arrivals at top — Rule 2 active (is_new_arrival OR price_band=premium boost for High Value Returning segment)",
-      "personalisation_gap": "Strong BRUID + completed purchase + loyalty membership + a positive survey. Pre-fix: Rule 2 inactive. Post-fix: full 1:1 personalisation active — premium and new-arrival products surface at the top.",
-      "real_customer": {
-        "customer_id": "6a0ded44355ecedd103debda",
-        "identifier": "jaylon.shinoda@br.demo.mailbox.org",
-        "total_events": 24
-      },
-      "journey": [
-        {
-          "type": "view_category",
-          "category": "Apparel / men / jackets",
-          "detail": "Browsed men's jackets",
-          "timestamp": "2025-05-23T16:32:26Z"
-        },
-        {
-          "type": "view_item",
-          "category": "Apparel / men / jackets",
-          "detail": "LUXURAZI Men Grey Checked Slim Fit Suit — $186.98",
-          "timestamp": "2025-05-23T17:12:26Z"
-        },
-        {
-          "type": "cart_update",
-          "category": "Cart",
-          "detail": "Added LUXURAZI suit (size M)",
-          "timestamp": "2025-05-23T17:30:44Z"
-        },
-        {
-          "type": "checkout",
-          "category": "Checkout",
-          "detail": "Checked out LUXURAZI suit",
-          "timestamp": "2025-05-23T18:04:41Z"
-        },
-        {
-          "type": "purchase",
-          "category": "Apparel / men / jackets",
-          "detail": "Purchased LUXURAZI suit — $186.98 (Apple Pay)",
-          "timestamp": "2025-05-23T18:26:57Z"
-        },
-        {
-          "type": "loyalty_update",
-          "category": "Loyalty",
-          "detail": "Earned points → Gold status (210 pts)",
-          "timestamp": "2025-05-23T19:33:05Z"
-        },
-        {
-          "type": "survey",
-          "category": "Post-purchase NPS",
-          "detail": "'I love my purchase. Delivery could be faster though.'",
-          "timestamp": "2025-05-24T00:35:45Z"
         }
       ]
     }

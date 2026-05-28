@@ -1,13 +1,13 @@
 {
   "_meta": {
-    "description": "PRE-FIX PRS demo state — REAL pre-fix diagnosis. AutoSegment coverage, signal freshness and A/B coverage are MCP-harvested from the wobbly-donkey project (see loomi-snapshot.json). BRUID match rate and rule conflicts are Discovery-sourced PLACEHOLDERS until the Discovery side is wired. Composite recomputed from real values — no longer the hardcoded 52.",
+    "description": "PRE-FIX PRS demo state — REAL pre-fix diagnosis. Composite is computed from the 6 in-scope Engagement-measured dimensions: 3 existing (AutoSegment coverage, Signal Freshness, A/B Coverage — MCP-harvested) plus 3 new Engagement-measured dimensions (Segment Definition Quality, Profile Completeness, Behavioral Signal Richness — also MCP-harvested from the wobbly-donkey Engagement project). BRUID match rate and Rule Conflicts are Discovery dimensions that are OUT OF SCOPE — Discovery is not enabled for this hackathon sandbox (infrastructure scope, 90-day roadmap). They are excluded from the composite so their placeholder values cannot inflate or contradict the score.",
     "state": "pre_fix",
     "locked": false,
-    "generated_at": "2026-05-26T20:14:29Z",
-    "source": "loomi-snapshot.json (3 MCP dims) + Discovery placeholders (2 dims)",
-    "scoring": "score = min(20, round(raw_value × 20)); status 0–8 critical, 9–14 warning, 15–20 healthy"
+    "generated_at": "2026-05-29T00:00:00Z",
+    "source": "loomi-snapshot.json — 6 Engagement MCP dims (3 existing + 3 new). BRUID + Rule Conflicts are out of scope (Discovery not enabled) and excluded.",
+    "scoring": "Per dimension: score = min(20, round(raw_value × 20)); status 0–8 critical, 9–14 warning, 15–20 healthy. Composite = round(sum of in-scope dims / (20 × count of in-scope dims) × 100); out-of-scope (Discovery) dims excluded. RAG: red <50, amber 50–74, green 75+."
   },
-  "composite_score": 28,
+  "composite_score": 14,
   "rag_status": "red",
   "rag_thresholds": {
     "red": { "min": 0, "max": 49 },
@@ -20,7 +20,7 @@
       "dimension_id": "bruid_match_rate",
       "dimension_name": "BRUID Match Rate",
       "raw_value": 0.22,
-      "raw_label": "22% of sessions recognised — Discovery placeholder, not yet wired",
+      "raw_label": "Not in scope — Discovery is not enabled for this hackathon sandbox (excluded from the composite)",
       "normalised_score": 8,
       "max_score": 20,
       "status": "critical",
@@ -29,6 +29,8 @@
       "target_value": 0.70,
       "target_label": "70% target",
       "is_placeholder": true,
+      "out_of_scope": true,
+      "scope_note": "Infrastructure scope — Discovery enablement is on the 90-day roadmap, not this demo.",
       "is_synthetic": true,
       "timestamp": "2026-05-22T00:00:00Z"
     },
@@ -68,7 +70,7 @@
       "dimension_id": "rule_conflicts",
       "dimension_name": "Rule Conflicts",
       "raw_value": 0.95,
-      "raw_label": "95% conflict-free — Discovery placeholder, not yet wired",
+      "raw_label": "Not in scope — Discovery is not enabled for this hackathon sandbox (excluded from the composite)",
       "normalised_score": 18,
       "max_score": 20,
       "status": "healthy",
@@ -76,8 +78,10 @@
       "client": "discovery-client",
       "target_value": 1.0,
       "target_label": "100% target (zero conflicts)",
-      "note": "Higher raw_value = healthier. Discovery placeholder pending live wiring.",
+      "note": "Higher raw_value = healthier. Discovery is not enabled for this sandbox — out of scope, excluded from the composite.",
       "is_placeholder": true,
+      "out_of_scope": true,
+      "scope_note": "Infrastructure scope — Discovery enablement is on the 90-day roadmap, not this demo.",
       "is_synthetic": true,
       "timestamp": "2026-05-22T00:00:00Z"
     },
@@ -96,11 +100,60 @@
       "is_placeholder": false,
       "is_synthetic": false,
       "timestamp": "2026-05-26T20:14:29Z"
+    },
+    {
+      "dimension_id": "segment_definition_quality",
+      "dimension_name": "Segment Definition Quality",
+      "raw_value": 0.167,
+      "raw_label": "2 segmentations exist, each with a single funnel step and a single price-threshold condition; 0/2 exposed to Discovery (MCP-harvested)",
+      "normalised_score": 3,
+      "max_score": 20,
+      "status": "critical",
+      "data_source": "engagement_mcp",
+      "client": "engagement-client",
+      "target_value": 0.85,
+      "target_label": "≥3 conditions/segment, fully exposed to Discovery",
+      "is_placeholder": false,
+      "is_synthetic": false,
+      "timestamp": "2026-05-29T00:00:00Z"
+    },
+    {
+      "dimension_id": "profile_completeness",
+      "dimension_name": "Profile Completeness",
+      "raw_value": 0.2045,
+      "raw_label": "25,187 of 123,164 customers (20.4%) have an email populated — the rest are anonymous cookies (MCP-harvested)",
+      "normalised_score": 4,
+      "max_score": 20,
+      "status": "critical",
+      "data_source": "engagement_mcp",
+      "client": "engagement-client",
+      "target_value": 0.75,
+      "target_label": "75% target — identified profiles with enriched attributes",
+      "is_placeholder": false,
+      "is_synthetic": false,
+      "timestamp": "2026-05-29T00:00:00Z"
+    },
+    {
+      "dimension_id": "behavioral_signal_richness",
+      "dimension_name": "Behavioral Signal Richness",
+      "raw_value": 0.40,
+      "raw_label": "28 event types defined; ~4 distinct event types per 90d-active user vs target 10 (MCP-harvested)",
+      "normalised_score": 8,
+      "max_score": 20,
+      "status": "critical",
+      "data_source": "engagement_mcp",
+      "client": "engagement-client",
+      "target_value": 1.0,
+      "target_label": "10+ distinct event types per active user",
+      "is_placeholder": false,
+      "is_synthetic": false,
+      "timestamp": "2026-05-29T00:00:00Z"
     }
   ],
   "score_verification": {
-    "sum_check": "8 (bruid*) + 0 (autosegment) + 2 (freshness) + 18 (rule_conflicts*) + 0 (ab) = 28",
-    "composite_score": 28,
-    "note": "* = Discovery placeholder. Real MCP dims = autosegment, signal_freshness, ab_test_coverage."
+    "in_scope_dims": "autosegment 0 + signal_freshness 2 + ab_test_coverage 0 + segment_definition_quality 3 + profile_completeness 4 + behavioral_signal_richness 8 = 17 of 120 available points (6 Engagement MCP dimensions)",
+    "composite_calc": "round(17 / 120 × 100) = 14",
+    "composite_score": 14,
+    "excluded_out_of_scope": "bruid_match_rate (8/20) and rule_conflicts (18/20) are Discovery dimensions, out of scope (Discovery not enabled for this sandbox), and are NOT counted."
   }
 }

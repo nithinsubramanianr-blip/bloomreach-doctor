@@ -114,6 +114,26 @@ interface LoomiSnapshot {
       active_customers_last_90d: number;
       most_recent_event_days_ago: number;
     };
+    segment_definition_quality: {
+      raw_value: number;
+      segmentations_count: number;
+      avg_conditions_per_segment: number;
+      target_conditions_per_segment: number;
+      exposed_to_discovery_ratio: number;
+    };
+    profile_completeness: {
+      raw_value: number;
+      total_customers: number;
+      customers_with_email: number;
+      customer_properties_defined: number;
+    };
+    behavioral_signal_richness: {
+      raw_value: number;
+      event_types_defined: number;
+      active_customers_last_90d: number;
+      avg_distinct_event_types_per_active_user_estimate: number;
+      target_distinct_event_types: number;
+    };
     recommendation_engines: {
       engines_count: number;
       engines_wired_to_catalog: number;
@@ -228,6 +248,43 @@ export async function loomiRawDimension(
         0.6,
         "60% target"
       );
+    case "segment_definition_quality": {
+      const s = d.segment_definition_quality;
+      return make(
+        s.raw_value,
+        "Segment Definition Quality",
+        "engagement_mcp",
+        `${s.segmentations_count} segmentations, avg ${s.avg_conditions_per_segment} condition(s)/segment vs target ${s.target_conditions_per_segment}; ${Math.round(
+          s.exposed_to_discovery_ratio * 100
+        )}% exposed to Discovery (MCP-harvested)`,
+        0.85,
+        "≥3 conditions/segment, fully exposed to Discovery"
+      );
+    }
+    case "profile_completeness": {
+      const p = d.profile_completeness;
+      return make(
+        p.raw_value,
+        "Profile Completeness",
+        "engagement_mcp",
+        `${p.customers_with_email.toLocaleString()} of ${p.total_customers.toLocaleString()} customers (${Math.round(
+          p.raw_value * 100
+        )}%) have an email populated across ${p.customer_properties_defined} customer properties (MCP-harvested)`,
+        0.75,
+        "75% identified profiles"
+      );
+    }
+    case "behavioral_signal_richness": {
+      const b = d.behavioral_signal_richness;
+      return make(
+        b.raw_value,
+        "Behavioral Signal Richness",
+        "engagement_mcp",
+        `${b.event_types_defined} event types defined; avg ${b.avg_distinct_event_types_per_active_user_estimate} distinct types per 90d-active user vs target ${b.target_distinct_event_types} (MCP-harvested)`,
+        1.0,
+        "10+ distinct event types per active user"
+      );
+    }
     default:
       throw new Error(
         `loomiRawDimension: "${dimensionId}" is not an MCP-sourced dimension (no snapshot data)`

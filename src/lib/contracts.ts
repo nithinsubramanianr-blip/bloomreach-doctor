@@ -15,7 +15,10 @@ export type DimensionId =
   | "autosegment_coverage"
   | "signal_freshness"
   | "rule_conflicts"
-  | "ab_test_coverage";
+  | "ab_test_coverage"
+  | "segment_definition_quality"
+  | "profile_completeness"
+  | "behavioral_signal_richness";
 
 export type DimensionStatus =
   | "critical"
@@ -23,7 +26,11 @@ export type DimensionStatus =
   | "healthy"
   | "out_of_scope";
 
-export type DataSource = "discovery_api" | "marketing_mcp" | "analytics_mcp";
+export type DataSource =
+  | "discovery_api"
+  | "marketing_mcp"
+  | "analytics_mcp"
+  | "engagement_mcp";
 
 /** Canonical order M1 returns dimensions in (prs-data-fetcher / data files). */
 export const DIMENSION_ORDER: readonly DimensionId[] = [
@@ -32,6 +39,9 @@ export const DIMENSION_ORDER: readonly DimensionId[] = [
   "signal_freshness",
   "rule_conflicts",
   "ab_test_coverage",
+  "segment_definition_quality",
+  "profile_completeness",
+  "behavioral_signal_richness",
 ] as const;
 
 /**
@@ -124,7 +134,7 @@ export interface PRSState {
   composite_score: number; // 0–100
   rag_status: RagStatus;
   boost_rules_state?: BoostRulesState;
-  dimensions: ScoredDimension[]; // exactly 5
+  dimensions: ScoredDimension[]; // 8 total — 6 in-scope Engagement dims + 2 out-of-scope Discovery dims
   fix_list: FixResult[]; // 3 ranked fixes
   generated_at: string; // ISO8601
 }

@@ -42,6 +42,7 @@ const VALID_SOURCE: readonly DataSource[] = [
   "discovery_api",
   "marketing_mcp",
   "analytics_mcp",
+  "engagement_mcp",
 ];
 
 function asRecord(raw: unknown): Record<string, unknown> {

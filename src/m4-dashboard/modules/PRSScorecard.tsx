@@ -13,6 +13,7 @@ const SOURCE_LABEL: Record<DataSource, string> = {
   discovery_api: "Discovery",
   marketing_mcp: "Marketing",
   analytics_mcp: "Analytics",
+  engagement_mcp: "Engagement",
 };
 
 const STATUS_DOT: Record<DimensionStatus, string> = {
@@ -77,7 +78,7 @@ export function PRSScorecard({
             })}
           </p>
           <p className="mt-2 text-center text-[11px] leading-relaxed text-faint">
-            Scored on 3 of 5 dimensions — BRUID Match Rate &amp; Rule Conflicts
+            Scored on 6 of 8 dimensions — BRUID Match Rate &amp; Rule Conflicts
             are infrastructure scope (90-day Discovery roadmap), not this demo.
           </p>
           <button
@@ -108,13 +109,15 @@ export function PRSScorecard({
         <section className="animate-rise shadow-panel rounded-2xl border border-border bg-surface p-4 md:p-6">
           <div className="mb-5">
             <div className="flex items-baseline justify-between gap-3">
-              <h2 className="text-xl font-semibold text-text">Five dimensions</h2>
+              <h2 className="text-xl font-semibold text-text">Eight dimensions</h2>
               <span className="text-[12px] text-faint">Each scored 0–20</span>
             </div>
             <p className="mt-1 text-[12px] text-faint">
-              Score is computed from the 3 Engagement MCP dimensions. BRUID Match
-              Rate and Rule Conflicts are not in scope — Discovery is not enabled
-              for this hackathon sandbox.
+              Score is computed from the 6 Engagement-measured dimensions
+              (AutoSegment Coverage, Signal Freshness, A/B Test Coverage, Segment
+              Definition Quality, Profile Completeness, Behavioral Signal
+              Richness). BRUID Match Rate and Rule Conflicts are not in scope —
+              Discovery is not enabled for this hackathon sandbox.
             </p>
           </div>
           <ul className="divide-y divide-border">

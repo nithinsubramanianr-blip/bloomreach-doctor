@@ -86,12 +86,33 @@ export function scoreABCoverage(input: ScorerInput): ScorerResult {
   );
 }
 
+export function scoreSegmentDefinitionQuality(input: ScorerInput): ScorerResult {
+  return build("segment_definition_quality", input, (score, status) =>
+    `Segment definition quality is ${pct(input.raw_value)} (${score}/20, ${status}) — conditions-per-segment depth weighted by Discovery exposure.`
+  );
+}
+
+export function scoreProfileCompleteness(input: ScorerInput): ScorerResult {
+  return build("profile_completeness", input, (score, status) =>
+    `Profile completeness is ${pct(input.raw_value)} (${score}/20, ${status}) — share of customers with an enriched (identified) profile.`
+  );
+}
+
+export function scoreBehavioralSignalRichness(input: ScorerInput): ScorerResult {
+  return build("behavioral_signal_richness", input, (score, status) =>
+    `Behavioral signal richness is ${pct(input.raw_value)} (${score}/20, ${status}) — avg distinct event types captured per active user vs target.`
+  );
+}
+
 const SCORERS: Record<DimensionId, (input: ScorerInput) => ScorerResult> = {
   bruid_match_rate: scoreBRUID,
   autosegment_coverage: scoreAutoSegment,
   signal_freshness: scoreSignalFreshness,
   rule_conflicts: scoreRuleConflicts,
   ab_test_coverage: scoreABCoverage,
+  segment_definition_quality: scoreSegmentDefinitionQuality,
+  profile_completeness: scoreProfileCompleteness,
+  behavioral_signal_richness: scoreBehavioralSignalRichness,
 };
 
 /** Dispatches to the correct scorer for a dimension id. */
