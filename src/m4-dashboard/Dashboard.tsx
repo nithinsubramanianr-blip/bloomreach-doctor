@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import type { DemoState, FixResult, PRSState } from "@/lib/contracts";
 import { BRAND } from "@/lib/brand";
-import { setRulesActiveCookie } from "@/lib/rules-flag";
+import { readRulesActiveCookie, setRulesActiveCookie } from "@/lib/rules-flag";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { ApprovalModal } from "./components/ApprovalModal";
 import { NLChat } from "./modules/NLChat";
@@ -59,6 +59,24 @@ export function Dashboard({ initialPRS }: DashboardProps) {
     setRulesActiveCookie(nextState === "after");
     await refreshScore(nextState);
   }
+
+  // Re-read the rulesActive cookie on mount and whenever the window regains
+  // focus. If another tab or the modal Approve flow flipped it, pick up the new
+  // state and refresh the score so the dial + button label sync up — without
+  // reloading the page. No-ops (no flicker) when the cookie already matches the
+  // server-rendered prop.
+  useEffect(() => {
+    function sync() {
+      const cookieActive = readRulesActiveCookie();
+      const prsActive = prsState.boost_rules_state === "all_active";
+      if (cookieActive === prsActive) return;
+      void refreshScore(cookieActive ? "after" : "before");
+    }
+    sync();
+    window.addEventListener("focus", sync);
+    return () => window.removeEventListener("focus", sync);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prsState.boost_rules_state]);
 
   function reviewFix(fix: FixResult) {
     setSelectedFix(fix);
