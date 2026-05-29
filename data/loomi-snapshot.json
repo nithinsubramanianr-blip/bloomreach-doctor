@@ -1,0 +1,220 @@
+{
+  "_meta": {
+    "data_type": "MCP-harvested real data",
+    "fabricated": false,
+    "note": "All figures harvested live from Bloomreach Engagement via the loomi MCP. Nothing is invented; empty findings are recorded as 0. The wobbly-donkey project is the standard Bloomreach fashion/jewellery demo dataset (real events, ~123k customers), NOT the synthetic PPD persona data in /data/personas.json. Counts via execute_analytics_eql; persona event histories via list_customer_events. 2026-05-27: persona event histories re-harvested via list_customer_events — high_value_returning swapped from dick.maser to jaylon.shinoda; marvin's purchase count corrected from 0 to 2 (he is an active buyer, incl. a $32,700 Cartier bracelet). 2026-05-28: cast recast to match real spend — Marvin moved gifting -> high_value_returning (the $32,700 purchase makes him high value), Jaylon dropped, and a new gifting persona (Jakob Minkus) was selected from live data (jewellery view_item in last 90 days + zero purchases). Elva unchanged. The diagnosis.* figures below are unchanged from the 2026-05-26 harvest.",
+    "harvested_at": "2026-05-26T20:14:29Z",
+    "personas_harvested_at": "2026-05-28T00:00:00Z",
+    "source": "Bloomreach Engagement (loomi MCP)",
+    "project": {
+      "name": "wobbly-donkey",
+      "category": "sandbox",
+      "id": "99373aee-5469-11f1-9fdb-862b79b06b65",
+      "workspace_id": "2974e09b-4175-4f5e-9cf8-49e09d6c8808",
+      "cloud_organization_id": "1e01c518-2d5e-4566-9091-3d100f95b03b",
+      "url": "https://uqa.app.exponea.dev/p/wobbly-donkey"
+    }
+  },
+
+  "diagnosis": {
+    "autosegment_coverage": {
+      "prs_dimension": "AutoSegment Coverage",
+      "segmentations_count": 0,
+      "segments_count": 0,
+      "coverage_pct": 0,
+      "raw_value": 0.0,
+      "status": "empty",
+      "tool": "list_segmentations",
+      "finding": "0 segmentations exist in the project. AutoSegment coverage = 0%."
+    },
+
+    "ab_test_coverage": {
+      "prs_dimension": "A/B Test Coverage",
+      "experiments_count": 0,
+      "coverage_pct": 0,
+      "raw_value": 0.0,
+      "status": "empty",
+      "tool": "list_experiments",
+      "finding": "0 web-personalization experiments / A/B tests are configured. A/B coverage = 0%.",
+      "note": "15988 raw 'experiment' events exist in event history, but there are 0 experiment DEFINITIONS in project config."
+    },
+
+    "segment_definition_quality": {
+      "prs_dimension": "Segment Definition Quality",
+      "segmentations_count": 2,
+      "segmentations": [
+        {
+          "id": "6a16f78311c856ef91f23cc9",
+          "name": "Customers purchased amount > $100",
+          "segments": 1,
+          "conditions_per_segment": 1,
+          "filter": "exists[purchase where total_price > 100]",
+          "discovery_exposed": false,
+          "merchandising_exposed": false,
+          "state": "unused"
+        },
+        {
+          "id": "6a172765fe78cc0d00382919",
+          "name": "Customers purchased amount > $150",
+          "segments": 1,
+          "conditions_per_segment": 1,
+          "filter": "exists[purchase where total_price > 150]",
+          "discovery_exposed": false,
+          "merchandising_exposed": false,
+          "state": "unused"
+        }
+      ],
+      "avg_conditions_per_segment": 1.0,
+      "target_conditions_per_segment": 3,
+      "exposed_to_discovery_ratio": 0.0,
+      "raw_value": 0.167,
+      "status": "critical",
+      "tools": ["list_segmentations", "get_segmentations"],
+      "finding": "2 segmentations exist, each with a single funnel step and a single price-threshold condition (purchase.total_price > $100 / $150). Neither is exposed to Discovery merchandising. Formula: avg(conditions_per_segment / 3) × (0.5 + 0.5 × discovery_exposed_ratio) = (1/3) × 0.5 = 0.167."
+    },
+
+    "profile_completeness": {
+      "prs_dimension": "Profile Completeness",
+      "total_customers": 123164,
+      "customer_properties_defined": 10,
+      "customers_with_email": 25187,
+      "customers_with_email_by_country": {
+        "null": 1849,
+        "Germany": 3755,
+        "UK": 8830,
+        "USA": 10753
+      },
+      "raw_value": 0.2045,
+      "status": "critical",
+      "tools": ["get_customer_property_schema", "execute_analytics_eql"],
+      "method": "execute_analytics_eql: 'select count customers matching customer.email has value by customer.country grouping top 5 with null'. Sum across all country rows (incl. null) = 25,187 customers with an email property populated, out of 123,164 total.",
+      "finding": "10 customer properties are defined in the schema (city, country, email, external_score, first_name, last_name, phone, gender, language, is_internal_traffic) but only 25,187 of 123,164 customers (20.45%) have an email populated — the rest are anonymous cookies with no enriched profile."
+    },
+
+    "behavioral_signal_richness": {
+      "prs_dimension": "Behavioral Signal Richness",
+      "event_types_defined": 28,
+      "total_events": 1099220,
+      "active_customers_last_90d": 13010,
+      "avg_events_per_active_customer_90d": 84.49,
+      "avg_distinct_event_types_per_active_user_estimate": 4.0,
+      "target_distinct_event_types": 10,
+      "raw_value": 0.40,
+      "status": "critical",
+      "tools": ["get_event_schema", "get_project_overview"],
+      "method": "Schema breadth × per-user density proxy. 28 event types are defined (page_visit, view_category, view_item, cart_update, checkout, purchase, banner, campaign, session_start, session_end, registration, loyalty_update, support_ticket, return, store_visit, survey, experiment, retargeting, menu, paper_catalogue, first_session, installation, inbound_call, outbound_call, consent, user_active, merge, purchase_item). With 1,099,220 events spread across 13,010 90d-active customers, the average active user triggers ~4 distinct event types (SDK-auto session_start / session_end / page_visit plus 1 retail event). Formula: avg_distinct_types / target_distinct_types = 4 / 10 = 0.40.",
+      "finding": "28 event types are defined and observed at least once, but the average 90d-active user only triggers ~4 distinct types — the rich behavioural fan-out (search, wishlist, survey, support_ticket, etc.) needed to drive multi-signal personalisation is not yet captured per user."
+    },
+
+    "signal_freshness": {
+      "prs_dimension": "Signal Freshness",
+      "total_customers": 123164,
+      "total_events": 1099220,
+      "oldest_event_unix": 1704073839,
+      "oldest_event_date": "2024-01-01",
+      "most_recent_event_days_ago": 0,
+      "most_recent_event_note": "Events present 0 days ago (within 24h of harvest, e.g. 1447 events on the most recent day). Data is current, not stale.",
+      "active_customers_last_30d": 5076,
+      "active_rate_last_30d": 0.0412,
+      "active_customers_last_90d": 13010,
+      "active_rate_last_90d": 0.1056,
+      "freshness_figure": 0.1056,
+      "freshness_basis": "Headline freshness = share of total customer base with >=1 event in the last 90 days (13010 / 123164 = 10.56%). Event recency itself is current (most recent event 0 days ago). 30-day active rate = 4.12%.",
+      "tools": ["get_project_overview", "execute_analytics_eql"],
+      "method": "execute_analytics_eql: 'select count customers by customer.country grouping top 50 with null customers matching exists[any event in last N days]', summed across all country rows (incl. null) to get distinct active customers.",
+      "active_30d_breakdown_by_country": { "null": 3223, "Germany": 316, "UK": 713, "USA": 824 },
+      "active_90d_breakdown_by_country": { "null": 9430, "Germany": 607, "UK": 1354, "USA": 1619 }
+    },
+
+    "recommendation_engines": {
+      "prs_dimension": "Recommendation / catalog wiring",
+      "engines_count": 0,
+      "engines_wired_to_catalog": 0,
+      "catalog": {
+        "name": "bounteous_fashion_jewellery_product",
+        "id": "6a15f5a63dede3049f806165",
+        "type": "product",
+        "item_count": 50
+      },
+      "catalog_usages": {
+        "scenarios": 0,
+        "recommendations": 0,
+        "email_campaigns": 0,
+        "sms_campaigns": 0,
+        "banners": 0,
+        "experiments": 0,
+        "in_app_messages": 0,
+        "surveys": 0,
+        "used_by_data_mapping": false
+      },
+      "status": "catalog present, no engine wired",
+      "tools": ["list_recommendations", "list_catalogs", "get_catalog_usages"],
+      "finding": "0 recommendation engines exist, and nothing references the bounteous_fashion_jewellery_product catalog (50 items). The catalog is loaded but unused."
+    }
+  },
+
+  "demo_personas": [
+    {
+      "role": "gifting",
+      "would_be_segment": "Gifting Intent",
+      "display_name": "Jakob",
+      "customer_id": "6a0e95dc18e80c1e615e1373",
+      "identifier": "jakob.minkus@br.demo.yahoo.com",
+      "location": "Denver, Colorado, USA",
+      "total_events": 17,
+      "purchases": 0,
+      "key_events": [
+        "session_start: arrived via a Facebook 'sale' ad on a new mobile install (Welcome flow), Denver, ~2026-04-30",
+        "banner: 'Discount countdown' in-app message (show, click)",
+        "view_item: Cartier 'Cactus de Cartier Necklace' (Jewelery > women > necklaces, $4,200, 2026-04-30) — the gift signal, NOT purchased",
+        "view_item: Puma summer tights ($19.99), Qurvii top ($24.95), Mr Bowerbird men's jeans ($23.98), DressBerry trousers ($17.99)",
+        "cart_update: added DressBerry trousers — then abandoned",
+        "session_end: Denver (no purchase)"
+      ],
+      "rationale": "Real customer who arrived via a Facebook 'sale' ad on a new mobile install and, in a single recent session (~30 Apr 2026), browsed a $4,200 Cartier necklace alongside apparel and added trousers to his cart before leaving without buying anything. A live jewellery-browsing + cart-abandon signal with ZERO purchases -> a genuine Gifting Intent prospect. BRUID present, so Discovery can segment him.",
+      "caveat": "Chosen from live MCP data (jewellery view_item in last 90 days + zero purchases, ranked top by recent engagement: 5 view_items). Replaces Marvin, who moved to High Value Returning once his real $32,700 Cartier purchase surfaced. Note: among zero-purchase customers this dataset has no heavier jewellery browser — one recent jewellery view + an abandoned cart is the strongest available real Gifting Intent example."
+    },
+    {
+      "role": "high_value_returning",
+      "would_be_segment": "High Value Returning",
+      "display_name": "Marvin",
+      "customer_id": "6a0ded42355ecedd103deb55",
+      "identifier": "marvin.bruemmer@br.demo.gmail.com",
+      "location": "Denver, Colorado, USA",
+      "total_events": 47,
+      "purchases": 2,
+      "key_events": [
+        "purchase: Cartier 'Love bracelet, diamond-paved' (Jewelery > bracelets, $32,700, card, 2025-08-13)",
+        "purchase: DressBerry trousers (Apparel > women > pants, $17.99, PayPal, 2025-06-10)",
+        "loyalty_update: points earned → final 210 GOLD (later 170 silver)",
+        "view_item: Cartier 'C de Cartier wedding band' (Jewelery > rings, $2,680, 2025-08-29) — browsed, not purchased",
+        "view_item: Jockey thermal top (Apparel > women > tops, $6.79)",
+        "banner: 'Free delivery' (click), 'Onexit banner with last viewed items' (show/close)",
+        "campaign: Black Friday, Post-purchase NPS flow; consent: accept newsletter",
+        "session_end: Denver, Colorado (last activity 2026-03-28)"
+      ],
+      "rationale": "Identified, BRUID-present Denver shopper with 47 events and TWO completed purchases — a $17.99 DressBerry trouser and a $32,700 Cartier 'Love bracelet, diamond-paved' — plus loyalty membership and post-purchase NPS engagement. By spend he is the highest-value customer in the cast: a clear High Value Returning customer who also browses premium jewellery (a Cartier wedding band most recently).",
+      "caveat": "Recast from Gifting Intent to High Value Returning to match real spend (the $32,700 Cartier purchase). Replaces Jaylon (customer_id 6a0ded44355ecedd103debda, $186.98 LUXURAZI suit + Gold loyalty), who was dropped from the demo cast."
+    },
+    {
+      "role": "new_low_signal_prospect",
+      "would_be_segment": "New Prospecting",
+      "display_name": "Elva",
+      "customer_id": "6a0ded43355ecedd103deb95",
+      "identifier": "elva.gopez@br.demo.hotmail.com",
+      "total_events": 2,
+      "purchases": 0,
+      "key_events": [
+        "banner: 'Push notifications subscription banner' (Variant A, show) — 2025-10-07",
+        "registration — 2025-10-07 (same session)"
+      ],
+      "rationale": "Only 2 lifetime events - a banner impression then a registration on the same day. Brand-new account with essentially zero behavioral signal. Would fall into a New Prospecting segment."
+    }
+  ],
+
+  "would_be_segments_definition": {
+    "Gifting Intent": "Customers browsing/viewing gift-category items (e.g. jewellery, wedding bands) without recent purchase intent of their own.",
+    "High Value Returning": "Identified customers with completed purchase(s) and loyalty membership / repeat lifecycle engagement.",
+    "New Prospecting": "Newly registered or near-zero-signal customers with minimal event history."
+  }
+}

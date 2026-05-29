@@ -15,9 +15,8 @@ import {
   loomiFindings,
   loomiPersonaContext,
 } from "@/m1-bloomreach/synthetic-loader";
-import { generateFixList } from "@/m2-scoring/fix-generator";
 import { calculatePRS } from "@/m2-scoring/prs-calculator";
-import { explainWithClaude } from "./llm-explainer";
+import { buildFixList, explainWithClaude } from "./llm-explainer";
 
 /**
  * M3 entry point — the sole public API of the NL interface (FR-004-1).
@@ -163,7 +162,7 @@ export async function handleQuery(
   // Real tool calls: fetch dimensions through M1, score through M2.
   const dimensions = await fetchAllDimensions(state);
   const prs = calculatePRS(dimensions);
-  prs.fix_list = generateFixList(prs);
+  prs.fix_list = await buildFixList(prs);
 
   // Real MCP findings + active-shopper context (both harvested, never invented).
   // Only cite live findings against the real pre-fix state.

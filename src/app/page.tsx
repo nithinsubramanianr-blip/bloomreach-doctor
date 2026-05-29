@@ -1,6 +1,6 @@
 import { fetchAllDimensions } from "@/m1-bloomreach/prs-data-fetcher";
-import { generateFixList } from "@/m2-scoring/fix-generator";
 import { calculatePRS } from "@/m2-scoring/prs-calculator";
+import { buildFixList } from "@/m3-nl/llm-explainer";
 import { Dashboard } from "@/m4-dashboard/Dashboard";
 
 /**
@@ -14,7 +14,7 @@ export default async function Home() {
   const dimensions = await fetchAllDimensions("before");
 
   const prs = calculatePRS(dimensions);
-  prs.fix_list = generateFixList(prs);
+  prs.fix_list = await buildFixList(prs);
   prs.boost_rules_state = "all_inactive";
 
   return <Dashboard initialPRS={prs} />;

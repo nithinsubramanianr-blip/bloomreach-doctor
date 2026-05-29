@@ -7,6 +7,7 @@ import type {
   PersonaId,
 } from "@/lib/contracts";
 import { isLive } from "@/lib/env";
+import { liveSearch } from "./discovery-live";
 import { normaliseDimension } from "./normaliser";
 import { loadRawDimension } from "./synthetic-loader";
 import { syntheticSearch } from "./synthetic-search";
@@ -73,14 +74,15 @@ export async function searchProducts(
   }
 
   try {
-    // TODO(live): call Bloomreach Discovery search REST API using `bruid`
-    // context and `query`, then normalise to DiscoverySearchResult. Layered in
-    // once sandbox credentials arrive.
-    void query;
-    void bruid;
-    return syntheticSearch(persona, state);
-  } catch {
-    console.log("[m1-bloomreach] discovery-client using synthetic fallback");
+    // Live Bloomreach Discovery search. Personalisation is driven by the `url`
+    // param (audience flag per persona, applied only in the AFTER state). On any
+    // error we fall back to the deterministic synthetic ranking below.
+    return await liveSearch(query, persona, state, bruid);
+  } catch (error) {
+    console.log(
+      "[m1-bloomreach] discovery-client live search failed, using synthetic fallback:",
+      error instanceof Error ? error.message : error
+    );
     return syntheticSearch(persona, state);
   }
 }

@@ -3,8 +3,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import type { DemoState } from "@/lib/contracts";
 import { fetchAllDimensions } from "@/m1-bloomreach/prs-data-fetcher";
 import { getRuleActivationState } from "@/m1-bloomreach/rule-manager";
-import { generateFixList } from "@/m2-scoring/fix-generator";
 import { calculatePRS } from "@/m2-scoring/prs-calculator";
+import { buildFixList } from "@/m3-nl/llm-explainer";
 
 /**
  * GET /api/prs?state=before|after
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
 
   const dimensions = await fetchAllDimensions(state);
   const prs = calculatePRS(dimensions);
-  prs.fix_list = generateFixList(prs);
+  prs.fix_list = await buildFixList(prs);
 
   const rules = await getRuleActivationState(state);
   prs.boost_rules_state = rules.all_active ? "all_active" : "all_inactive";
