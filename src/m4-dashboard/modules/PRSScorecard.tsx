@@ -1,10 +1,14 @@
 "use client";
 
+import { useState } from "react";
+
 import type {
   DataSource,
+  DemoState,
   DimensionStatus,
   FixResult,
   PRSState,
+  ReasoningTraceStep,
   ScoredDimension,
 } from "@/lib/contracts";
 import { ScoreDial } from "../components/ScoreDial";
@@ -14,6 +18,14 @@ const SOURCE_LABEL: Record<DataSource, string> = {
   marketing_mcp: "Marketing",
   analytics_mcp: "Analytics",
   engagement_mcp: "Engagement",
+};
+
+/** Full source label for the "Sources consulted" footer in the Explain panel. */
+const SOURCE_FULL: Record<DataSource, string> = {
+  discovery_api: "Discovery API",
+  marketing_mcp: "Marketing MCP",
+  analytics_mcp: "Analytics MCP",
+  engagement_mcp: "Engagement MCP",
 };
 
 const STATUS_DOT: Record<DimensionStatus, string> = {
@@ -58,6 +70,7 @@ export function PRSScorecard({
   isRefreshing,
 }: PRSScorecardProps) {
   const rulesActive = prsState.boost_rules_state === "all_active";
+  const state: DemoState = rulesActive ? "after" : "before";
 
   return (
     <div className="space-y-6">
@@ -122,7 +135,7 @@ export function PRSScorecard({
           </div>
           <ul className="divide-y divide-border">
             {prsState.dimensions.map((d) => (
-              <DimensionRow key={d.dimension_id} dimension={d} />
+              <DimensionRow key={d.dimension_id} dimension={d} state={state} />
             ))}
           </ul>
         </section>
@@ -146,13 +159,55 @@ export function PRSScorecard({
   );
 }
 
-function DimensionRow({ dimension }: { dimension: ScoredDimension }) {
+function DimensionRow({
+  dimension,
+  state,
+}: {
+  dimension: ScoredDimension;
+  state: DemoState;
+}) {
   const outOfScope = dimension.status === "out_of_scope";
   const pct = outOfScope ? 0 : (dimension.score / dimension.max_score) * 100;
   const improved =
     !outOfScope &&
     typeof dimension.change_from_pre_fix === "number" &&
     dimension.change_from_pre_fix > 0;
+
+  const [expanded, setExpanded] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [explanation, setExplanation] = useState<string | null>(null);
+  const [trace, setTrace] = useState<ReasoningTraceStep[]>([]);
+
+  async function toggleExplain() {
+    // Second click collapses; the loaded explanation is kept for re-open.
+    if (expanded) {
+      setExpanded(false);
+      return;
+    }
+    setExpanded(true);
+    if (explanation !== null) return; // already fetched — no re-hit
+
+    setLoading(true);
+    try {
+      const res = await fetch(
+        `/api/explain-dimension?dimension_id=${dimension.dimension_id}&state=${state}`
+      );
+      if (res.ok) {
+        const data = (await res.json()) as {
+          explanation?: string;
+          reasoning_trace?: ReasoningTraceStep[];
+        };
+        setExplanation(data.explanation ?? "");
+        setTrace(Array.isArray(data.reasoning_trace) ? data.reasoning_trace : []);
+      } else {
+        setExplanation("Couldn't load an explanation right now — try again.");
+      }
+    } catch {
+      setExplanation("Couldn't load an explanation right now — try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <li
@@ -199,6 +254,14 @@ function DimensionRow({ dimension }: { dimension: ScoredDimension }) {
               </>
             )}
           </span>
+          <button
+            type="button"
+            onClick={toggleExplain}
+            aria-expanded={expanded}
+            className="shrink-0 rounded-full border border-border px-2.5 py-1 text-[11px] font-medium text-muted transition-colors hover:border-accent/40 hover:text-accent"
+          >
+            {outOfScope ? "Why disabled?" : "Explain"}
+          </button>
         </div>
       </div>
       <div className="ml-4 h-1.5 overflow-hidden rounded-full bg-surface-2">
@@ -207,6 +270,31 @@ function DimensionRow({ dimension }: { dimension: ScoredDimension }) {
           style={{ width: `${pct}%`, transition: "width 800ms ease" }}
         />
       </div>
+
+      {expanded && (
+        <div className="ml-4 mt-1 rounded-lg border border-border bg-surface-2/50 p-3 text-[13px] leading-relaxed text-text-body">
+          {loading ? (
+            <span className="flex items-center gap-2 text-muted">
+              <span
+                className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-border border-t-accent"
+                aria-hidden
+              />
+              Asking the doctor…
+            </span>
+          ) : (
+            <>
+              <p>{explanation}</p>
+              {!outOfScope && explanation && (
+                <p className="mt-2 text-[11px] text-faint">
+                  Sources consulted: {SOURCE_FULL[dimension.data_source]}
+                  {trace.length > 0 &&
+                    ` · ${trace.length} tool ${trace.length === 1 ? "call" : "calls"}`}
+                </p>
+              )}
+            </>
+          )}
+        </div>
+      )}
     </li>
   );
 }

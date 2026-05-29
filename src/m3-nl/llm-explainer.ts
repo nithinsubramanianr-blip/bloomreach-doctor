@@ -331,3 +331,129 @@ export async function buildFixList(prs: PRSState): Promise<FixResult[]> {
     return generateFixList(prs);
   }
 }
+
+// ---------------------------------------------------------------------------
+// Per-dimension "Explain" panel (Module A) — reuses the Claude tool-use loop
+// ---------------------------------------------------------------------------
+
+/** Maps the pinned PRS state back to the demo axis the M1 fetchers expect. */
+function stateFromPRS(prs: PRSState): DemoState {
+  return prs.boost_rules_state === "all_active" ? "after" : "before";
+}
+
+const dimensionSystem = (prs: PRSState, dimension: ScoredDimension) =>
+  `You are the Personalization Performance Doctor for a Bloomreach Discovery storefront.
+You may use the tools to inspect this one dimension before answering.
+GROUND TRUTH — pin these, never restate or invent different numbers (show 0 where it is 0):
+- Composite readiness score ${prs.composite_score}/100 (${prs.rag_status}).
+- Dimension under review — ${dimension.dimension_name} (${dimension.dimension_id}): ${dimension.score}/20, status "${dimension.status}", raw ${Math.round(
+    dimension.raw_value * 100
+  )}%.
+Given the diagnosis, in 2-3 short sentences explain why this metric scored what it scored AND the single most impactful next step to improve it. Pin the score as ground truth — never restate or invent different numbers.
+Reply with ONLY the explanation prose: 2-3 sentences, no JSON, no preamble, no headings.`;
+
+/**
+ * Deterministic per-dimension explanation. Used when ANTHROPIC_API_KEY is absent
+ * or on any Claude/parse failure, so the "Explain" panel always renders
+ * something grounded in the pinned score (same shape as the live path).
+ */
+export function deterministicDimensionExplanation(
+  prs: PRSState,
+  dimension: ScoredDimension
+): string {
+  const pct = Math.round(dimension.raw_value * 100);
+  const fix = prs.fix_list.find((f) => f.dimension === dimension.dimension_id);
+  const nextStep = fix
+    ? `${fix.fix_title} (${fix.revenue_impact})`
+    : "raising the underlying signal behind this metric";
+  const health =
+    dimension.status === "healthy"
+      ? "so it is already contributing positively"
+      : `so it is holding the ${prs.composite_score}/100 readiness score back`;
+  return `${dimension.dimension_name} scored ${dimension.score}/20 (${dimension.status}) from a raw measurement of ${pct}%, ${health}. The single most impactful next step is ${nextStep}.`;
+}
+
+/**
+ * Explains ONE dimension for the scorecard's "Explain" panel. Reuses the shared
+ * createClient() and the SAME native tool-use loop as explainWithClaude: Claude
+ * may call the matching M1 fetcher and the reasoning trace is extracted from the
+ * tool_use blocks. The score is pinned as ground truth. Falls back to a
+ * deterministic explanation when no API key is configured or on any failure, so
+ * the route never 500s and repeated clicks always render.
+ */
+export async function explainDimensionWithClaude(
+  prs: PRSState,
+  dimension: ScoredDimension
+): Promise<{ explanation: string; reasoning_trace: ReasoningTraceStep[] }> {
+  if (!serverEnv.anthropicApiKey()) {
+    return {
+      explanation: deterministicDimensionExplanation(prs, dimension),
+      reasoning_trace: [],
+    };
+  }
+
+  const state = stateFromPRS(prs);
+  const client = createClient();
+  const trace: ReasoningTraceStep[] = [];
+  const messages: Anthropic.MessageParam[] = [
+    { role: "user", content: `Explain the ${dimension.dimension_name} dimension.` },
+  ];
+
+  try {
+    for (let i = 0; i < 4; i++) {
+      const res = await client.messages.create({
+        model: serverEnv.claudeModel(),
+        max_tokens: 512,
+        system: dimensionSystem(prs, dimension),
+        tools: TOOLS,
+        tool_choice: { type: "auto" },
+        messages,
+      });
+
+      const toolUses = res.content.filter(
+        (b): b is Anthropic.ToolUseBlock => b.type === "tool_use"
+      );
+
+      if (res.stop_reason !== "tool_use" || toolUses.length === 0) {
+        const text = res.content
+          .filter((b): b is Anthropic.TextBlock => b.type === "text")
+          .map((b) => b.text)
+          .join("")
+          .trim();
+        if (text === "") break; // empty reply → deterministic fallback below
+        return { explanation: text, reasoning_trace: trace };
+      }
+
+      messages.push({ role: "assistant", content: res.content });
+
+      const results: Anthropic.ToolResultBlockParam[] = [];
+      for (const tu of toolUses) {
+        const dim = await FETCHERS[tu.name as FetcherName](state);
+        const summary =
+          dim.raw_label ??
+          `${dim.dimension_name}: ${dim.normalised_score}/${dim.max_score}`;
+        trace.push({
+          tool_name: tu.name,
+          tool_input: tu.input as Record<string, unknown>,
+          tool_output_summary: summary,
+        });
+        results.push({
+          type: "tool_result",
+          tool_use_id: tu.id,
+          content: JSON.stringify(dim),
+        });
+      }
+      messages.push({ role: "user", content: results });
+    }
+  } catch (error) {
+    console.log(
+      "[m3-nl] llm dimension explanation failed, using deterministic fallback:",
+      error instanceof Error ? error.message : error
+    );
+  }
+
+  return {
+    explanation: deterministicDimensionExplanation(prs, dimension),
+    reasoning_trace: trace,
+  };
+}

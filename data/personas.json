@@ -27,7 +27,7 @@
       "bruid_value": null,
       "demo_query": "necklace",
       "plp_before_state": "Bestsellers at top — generic ranking, no personalisation active",
-      "plp_after_state": "Bestsellers at top — Rule 3 active (is_bestseller boost for New Prospecting segment)",
+      "plp_after_state": "Bestsellers shown — same as the generic order, because new visitors with no behavioural signal get the safe default. Personalisation only shows its power once a shopper accumulates a BRUID and intent. Switch to Jakob or Marvin to see the segment rules visibly fire.",
       "personalisation_gap": "With only a registration and one banner impression — and no BRUID — Bloomreach has near-zero signal and cannot identify Elva across sessions. Rule 3 targets the segment, but a persistent BRUID is required for cross-session recognition.",
       "real_customer": {
         "customer_id": "6a0ded43355ecedd103deb95",
@@ -66,7 +66,7 @@
       "bruid_value": "_br_uid_2=jakob-gifting-demo-001",
       "demo_query": "necklace",
       "plp_before_state": "Generic ranking — Rule 1 INACTIVE, gift products buried",
-      "plp_after_state": "Gift sets at top — Rule 1 active (gift_eligible boost for Gifting Intent segment)",
+      "plp_after_state": "On-sale picks at top — Rule 1 active (discounted items boosted for Gifting Intent — proxy for gift-eligibility)",
       "personalisation_gap": "BRUID present and Jakob is showing clear gifting intent — browsing a high-end Cartier necklace and abandoning a cart — without converting. Pre-fix: Rule 1 inactive, so gift-eligible products stay buried. Post-fix: Rule 1 active and gift products surface at the top of his results.",
       "real_customer": {
         "customer_id": "6a0e95dc18e80c1e615e1373",
@@ -136,7 +136,7 @@
       "bruid_value": "_br_uid_2=marvin-highvalue-demo-002",
       "demo_query": "necklace",
       "plp_before_state": "Generic ranking — Rule 2 INACTIVE, premium/new arrivals not surfaced",
-      "plp_after_state": "Premium and new arrivals at top — Rule 2 active (is_new_arrival OR price_band=premium boost for High Value Returning segment)",
+      "plp_after_state": "Latest arrivals at top — Rule 2 active (new-this-week boost for High Value Returning shoppers)",
       "personalisation_gap": "Strong BRUID + two completed purchases (incl. a $32,700 Cartier piece) + loyalty membership + a high affinity for premium jewellery. Pre-fix: Rule 2 inactive. Post-fix: full 1:1 personalisation active — premium and new-arrival products surface at the top.",
       "real_customer": {
         "customer_id": "6a0ded42355ecedd103deb55",
