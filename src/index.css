@@ -2,13 +2,30 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─────────────────────────────────────────────────────────────────────────
+ * Bounteous x Accolite design tokens.
+ * Primary: #2D1BB5 (Bounteous deep blue, from bounteous.com logo).
+ * Accent : #7C3AED (Bounteous-adjacent violet — for CTAs / active states).
+ * Statuses kept industry-standard for legibility.
+ * Legacy --ppd-navy / --ppd-teal aliases preserved for backwards-compat.
+ * ───────────────────────────────────────────────────────────────────────── */
 :root {
-  --ppd-navy: #1B3A5C;
-  --ppd-teal: #0E7C7B;
+  --ppd-primary: #2D1BB5;
+  --ppd-primary-deep: #1B0F8C;
+  --ppd-accent: #7C3AED;
+  --ppd-accent-soft: #EDE9FE;
+  --ppd-ink: #0F172A;
+  --ppd-ink-soft: #475569;
   --ppd-amber: #F59E0B;
   --ppd-red: #DC2626;
   --ppd-green: #16A34A;
   --ppd-white: #FFFFFF;
+  --ppd-surface: #F8FAFC;
+  --ppd-border: #E2E8F0;
+
+  /* Legacy aliases — kept so any unmigrated component still renders. */
+  --ppd-navy: #2D1BB5;
+  --ppd-teal: #7C3AED;
 }
 
 html,
@@ -16,8 +33,28 @@ body,
 #root {
   height: 100%;
   margin: 0;
-  background-color: #f8fafc;
-  color: #111827;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
-    Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  background-color: var(--ppd-surface);
+  color: var(--ppd-ink);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  font-feature-settings: 'cv11', 'ss01', 'ss03';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Subtle global focus ring tuned to the brand accent. */
+*:focus-visible {
+  outline: 2px solid var(--ppd-accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Reusable header gradient — primary brand sweep. */
+.ppd-header-gradient {
+  background-image: linear-gradient(
+    135deg,
+    var(--ppd-primary) 0%,
+    var(--ppd-primary-deep) 55%,
+    var(--ppd-accent) 100%
+  );
 }

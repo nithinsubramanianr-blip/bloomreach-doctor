@@ -1,32 +1,74 @@
 {
   "_meta": {
-    "description": "Fix catalogue for the PPD fix list generator. Rank 1 = AutoSegment. Used by fix-generator.js — sorted by score ascending, mapped by revenue impact descending.",
-    "generated_at": "2026-05-22T00:00:00Z"
+    "description": "Fix catalogue for the PPD fix list generator. Used by fix-generator.js — bottom dimensions by score (ASC), tiebreak by dimension_id, mapped to a catalogue fix, then top 3 sorted by revenue impact (DESC).",
+    "generated_at": "2026-05-29T00:00:00Z"
   },
   "fixes": [
-    {
-      "rank": 1,
-      "fix_id": "fix_autosegment",
-      "dimension_linked": "autosegment_coverage",
-      "fix_title": "Create 3 manual audience segments",
-      "plain_english_description": "Three key customer groups — Gifting Intent, High Value Returning, and New Prospecting — are not yet defined as segments in Bloomreach Engagement. Without segments, Loomi cannot apply any personalised ranking rules. Creating these three segments is the single highest-impact action available.",
-      "effort_level": "Low",
-      "estimated_revenue_impact": "12–18% RPV lift on targeted visitors",
-      "estimated_rpv_lift_pct_min": 12,
-      "estimated_rpv_lift_pct_max": 18,
-      "action_label": "Create Segments",
-      "risk_level": "low",
-      "steps": [
-        "In Bloomreach Engagement, navigate to Segments",
-        "Create segment: Gifting Intent (4+ gift category page views OR gift product clicks in last 30 days)",
-        "Create segment: High Value Returning (2+ purchases AND AOV > £150)",
-        "Create segment: New Prospecting (0 purchases AND session_count = 1)",
-        "Link each segment to corresponding Discovery boost rule"
-      ],
-      "impact_assumption": "Based on Bloomreach benchmark data: moving from 14% → 68% AutoSegment coverage with active rules typically drives 12–18% RPV on targeted visitor cohort."
-    },
+   
     {
       "rank": 2,
+      "fix_id": "fix_segment_definition_quality",
+      "dimension_linked": "segment_definition_quality",
+      "fix_title": "Rebuild segments with multi-condition filters",
+      "plain_english_description": "The two segments live in Engagement today are single-condition price thresholds (purchase.total_price > $100 / $150) and neither is exposed to Discovery merchandising. Rebuild them with multi-condition filters that combine behaviour, recency, and value, then expose them to Discovery so boost rules can target them.",
+      "effort_level": "Medium",
+      "estimated_revenue_impact": "10–16% RPV lift on personalised search",
+      "estimated_rpv_lift_pct_min": 10,
+      "estimated_rpv_lift_pct_max": 16,
+      "action_label": "Rebuild Segments",
+      "risk_level": "low",
+      "steps": [
+        "Open the two existing segmentations in Engagement",
+        "Add a 30-day recency window and a behavioural event (view_item / cart_update) to each segment",
+        "Layer at least 3 conditions per segment (purchase value + behaviour + recency)",
+        "Toggle Discovery integration → exposed for all 3 segments",
+        "Confirm each segment shows state \"used\" in the Discovery integration panel"
+      ],
+      "impact_assumption": "Single-condition price segments target a narrow cohort; multi-condition behavioural+recency segments typically lift personalised search RPV by 10–16%."
+    },
+    {
+      "rank": 3,
+      "fix_id": "fix_behavioral_signal_richness",
+      "dimension_linked": "behavioral_signal_richness",
+      "fix_title": "Instrument search, wishlist, and survey events",
+      "plain_english_description": "The 90d-active user only triggers ~4 distinct event types on average — mostly session_start, session_end, page_visit, and view_item. Rich behavioural signals like search, wishlist_add, cart_update breakdowns, and survey responses are sparsely captured. Instrumenting these events broadens the personalisation signal base for every active customer.",
+      "effort_level": "Medium",
+      "estimated_revenue_impact": "8–12% RPV lift via richer personalisation signals",
+      "estimated_rpv_lift_pct_min": 8,
+      "estimated_rpv_lift_pct_max": 12,
+      "action_label": "Instrument Events",
+      "risk_level": "low",
+      "steps": [
+        "Audit the SDK config and confirm session_start, session_end, page_visit are firing",
+        "Add the search event with query + result_count properties on every PLP query",
+        "Add wishlist_add and wishlist_remove on heart-icon actions",
+        "Trigger a survey event from post-purchase NPS responses",
+        "Validate in Engagement → Customers → Events that avg distinct types per 90d-active user clears 7"
+      ],
+      "impact_assumption": "Bloomreach benchmarks show that customers with ≥7 distinct event types feed 1.4× richer personalisation models, lifting RPV by 8–12% on personalised surfaces."
+    },
+    {
+      "rank": 4,
+      "fix_id": "fix_profile_completeness",
+      "dimension_linked": "profile_completeness",
+      "fix_title": "Capture email and enrich anonymous profiles",
+      "plain_english_description": "Only 20.4% of customers (25,187 of 123,164) have an email populated; the rest are anonymous cookies. Email and basic profile attributes unlock cross-device matching and lifecycle personalisation. Email-capture banners, checkout email-required, and post-purchase profile prompts typically lift identified ratio from ~20% to ~60%.",
+      "effort_level": "Medium",
+      "estimated_revenue_impact": "6–10% RPV lift via cross-device match",
+      "estimated_rpv_lift_pct_min": 6,
+      "estimated_rpv_lift_pct_max": 10,
+      "action_label": "Capture Profiles",
+      "risk_level": "low",
+      "steps": [
+        "Add a newsletter / 10%-off email-capture banner site-wide",
+        "Make email a required field at checkout (already standard practice)",
+        "Add a post-purchase profile-completion prompt (first name, gender, language)",
+        "Validate weekly in Engagement: % customers with email populated"
+      ],
+      "impact_assumption": "Lifting identified profile ratio from 20% → 60% restores ~3× the addressable cohort for lifecycle and 1:1 personalisation, typically 6–10% RPV impact."
+    },
+    {
+      "rank": 1,
       "fix_id": "fix_bruid",
       "dimension_linked": "bruid_match_rate",
       "fix_title": "Enable BRUID persistence for guest sessions",
@@ -46,7 +88,7 @@
       "impact_assumption": "Based on Bloomreach benchmarks: 1 percentage point improvement in BRUID match rate ≈ 0.5–0.8% RPV lift. Moving from 22% → 70% match rate = ~24–38% improvement = estimated 8–15% RPV on returning visitor cohort."
     },
     {
-      "rank": 3,
+      "rank": 6,
       "fix_id": "fix_rules",
       "dimension_linked": "ab_test_coverage",
       "fix_title": "Configure segment-scoped boost rules",
@@ -65,6 +107,26 @@
         "Monitor search result rankings for each persona in PLP"
       ],
       "impact_assumption": "Segment-scoped boost rules with confirmed segment coverage (post-fix 68%) typically drive 5–10% RPV improvement on affected search queries."
+    }, {
+      "rank": 5,
+      "fix_id": "fix_autosegment",
+      "dimension_linked": "autosegment_coverage",
+      "fix_title": "Create 3 manual audience segments",
+      "plain_english_description": "Three key customer groups — Gifting Intent, High Value Returning, and New Prospecting — are not yet defined as segments in Bloomreach Engagement. Without segments, Loomi cannot apply any personalised ranking rules. Creating these three segments is the single highest-impact action available.",
+      "effort_level": "Low",
+      "estimated_revenue_impact": "12–18% RPV lift on targeted visitors",
+      "estimated_rpv_lift_pct_min": 1,
+      "estimated_rpv_lift_pct_max": 2,
+      "action_label": "Create Segments",
+      "risk_level": "low",
+      "steps": [
+        "In Bloomreach Engagement, navigate to Segments",
+        "Create segment: Gifting Intent (4+ gift category page views OR gift product clicks in last 30 days)",
+        "Create segment: High Value Returning (2+ purchases AND AOV > $150)",
+        "Create segment: New Prospecting (0 purchases AND session_count = 1)",
+        "Link each segment to corresponding Discovery boost rule"
+      ],
+      "impact_assumption": "Based on Bloomreach benchmark data: moving from 0% → 68% AutoSegment coverage with active rules typically drives 12–18% RPV on targeted visitor cohort."
     }
   ]
 }

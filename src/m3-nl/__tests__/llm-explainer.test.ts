@@ -1,241 +1,119 @@
 /**
- * Unit tests — llm-explainer (with the Anthropic SDK mocked).
+ * Unit tests — llm-explainer (Loomi-only path, no Anthropic SDK).
  *
- * Tests:
- *  - Reasoning trace extraction from multi-block response.
- *  - Agent loop: tool_use → tool_result → final text.
- *  - tool_choice: { type: 'auto' } is set on the API call.
- *  - JSON parsing of Claude's final text.
- *
- * No real network calls. The SDK is mocked via jest.mock(...).
+ * The chat now runs deterministically over the live PRS state, with optional
+ * Loomi Conversations calls for catalog-flavoured queries.
  */
 
-// Mock the Anthropic SDK BEFORE requiring llm-explainer.
-const mockCreate = jest.fn();
-jest.mock('@anthropic-ai/sdk', () =>
-  jest.fn().mockImplementation(() => ({
-    messages: { create: mockCreate },
-  })),
-);
+// Loomi Conversations is mocked so tests never hit the network.
+const mockAsk = jest.fn();
+jest.mock('../loomi-conversations-client', () => ({
+  askLoomiConversations: (...args: unknown[]) => mockAsk(...args),
+}));
 
-// Also mock the M1 fetchers via tools-registry so we don't trip the
-// synthetic-loader on disk read while testing the agent loop.
-jest.mock('../tools-registry', () => {
-  const fakeTool = jest.fn(async (input: object) => ({
-    ok: true,
-    received: input,
-    dimension: 'mock',
-  }));
-  return {
-    getToolDefinitions: () => [
-      {
-        name: 'fetchBRUIDMatchRate',
-        description: 'mock',
-        input_schema: { type: 'object', properties: {}, required: [] },
-      },
-      {
-        name: 'fetchAutoSegmentCoverage',
-        description: 'mock',
-        input_schema: { type: 'object', properties: {}, required: [] },
-      },
-      {
-        name: 'fetchSignalFreshness',
-        description: 'mock',
-        input_schema: { type: 'object', properties: {}, required: [] },
-      },
-      {
-        name: 'fetchRuleConflicts',
-        description: 'mock',
-        input_schema: { type: 'object', properties: {}, required: [] },
-      },
-      {
-        name: 'fetchABTestCoverage',
-        description: 'mock',
-        input_schema: { type: 'object', properties: {}, required: [] },
-      },
-    ],
-    getToolImplementation: () => fakeTool,
-    getToolNames: () => [
-      'fetchBRUIDMatchRate',
-      'fetchAutoSegmentCoverage',
-      'fetchSignalFreshness',
-      'fetchRuleConflicts',
-      'fetchABTestCoverage',
-    ],
-  };
-});
+const { explainWithClaude, explainWithLoomi, _internal } = require('../llm-explainer');
 
-const { explainWithClaude, _internal } = require('../llm-explainer');
+const SAMPLE_PRS = {
+  composite_score: 27,
+  rag_status: 'red',
+  dimensions: [
+    { dimension_id: 'bruid_match_rate',           raw_value: 0.22,  normalised_score: 8,  score: 8,  status: 'critical', data_source: 'discovery_api' },
+    { dimension_id: 'autosegment_coverage',       raw_value: 0,     normalised_score: 0,  score: 0,  status: 'critical', data_source: 'marketing_mcp' },
+    { dimension_id: 'signal_freshness',           raw_value: 0.1056, normalised_score: 2, score: 2,  status: 'critical', data_source: 'marketing_mcp' },
+    { dimension_id: 'rule_conflicts',             raw_value: 0.95,  normalised_score: 18, score: 18, status: 'healthy',  data_source: 'discovery_api' },
+    { dimension_id: 'ab_test_coverage',           raw_value: 0,     normalised_score: 0,  score: 0,  status: 'critical', data_source: 'analytics_mcp' },
+    { dimension_id: 'segment_definition_quality', raw_value: 0.167, normalised_score: 3,  score: 3,  status: 'critical', data_source: 'engagement_mcp' },
+    { dimension_id: 'profile_completeness',       raw_value: 0.2045, normalised_score: 4, score: 4,  status: 'critical', data_source: 'engagement_mcp' },
+    { dimension_id: 'behavioral_signal_richness', raw_value: 0.40,  normalised_score: 8,  score: 8,  status: 'critical', data_source: 'engagement_mcp' },
+  ],
+  fix_list: [
+    { position: 1, fix_id: 'fix_autosegment', fix_title: 'Create 3 manual audience segments',
+      dimension: 'autosegment_coverage', revenue_impact: '12–18% RPV lift', effort: 'Low',
+      estimated_rpv_lift_pct_min: 12, estimated_rpv_lift_pct_max: 18 },
+    { position: 2, fix_id: 'fix_segment_definition_quality', fix_title: 'Rebuild segments',
+      dimension: 'segment_definition_quality', revenue_impact: '10–16% RPV lift', effort: 'Medium',
+      estimated_rpv_lift_pct_min: 10, estimated_rpv_lift_pct_max: 16 },
+    { position: 3, fix_id: 'fix_rules', fix_title: 'Configure boost rules',
+      dimension: 'ab_test_coverage', revenue_impact: '5–10% RPV lift', effort: 'Low',
+      estimated_rpv_lift_pct_min: 5, estimated_rpv_lift_pct_max: 10 },
+  ],
+};
 
 beforeEach(() => {
-  mockCreate.mockReset();
+  mockAsk.mockReset();
 });
 
-describe('llm-explainer — internal helpers', () => {
-  test('extractTraceAndText pairs tool_use with provided outputs', () => {
-    const response = {
-      content: [
-        {
-          type: 'tool_use',
-          id: 'tu_1',
-          name: 'fetchBRUIDMatchRate',
-          input: {},
-        },
-        { type: 'text', text: 'hello world' },
-      ],
-    };
-    const { trace, finalText } = _internal.extractTraceAndText(response, {
-      tu_1: '22% match rate',
-    });
-    expect(trace).toEqual([
-      {
-        tool_name: 'fetchBRUIDMatchRate',
-        tool_input: {},
-        tool_output_summary: '22% match rate',
-      },
-    ]);
-    expect(finalText).toBe('hello world');
+describe('llm-explainer — pure helpers', () => {
+  test('isCatalogQuery flags product-flavoured queries', () => {
+    expect(_internal.isCatalogQuery('show me necklaces under £50')).toBe(true);
+    expect(_internal.isCatalogQuery('find me gift rings')).toBe(true);
+    expect(_internal.isCatalogQuery('why is my PRS score low')).toBe(false);
   });
 
-  test('truncateForTrace caps at 200 chars', () => {
+  test('truncate caps long strings with an ellipsis', () => {
     const long = 'x'.repeat(500);
-    const truncated = _internal.truncateForTrace(long);
-    expect(truncated.length).toBeLessThanOrEqual(200);
-    expect(truncated.endsWith('…')).toBe(true);
+    const out = _internal.truncate(long);
+    expect(out.length).toBeLessThanOrEqual(200);
+    expect(out.endsWith('…')).toBe(true);
   });
 
-  test('parseLLMJson handles fenced JSON', () => {
-    const fenced =
-      '```json\n{"summary_sentence":"s","top_3_fixes":["a","b","c"]}\n```';
-    const parsed = _internal.parseLLMJson(fenced);
-    expect(parsed.summary_sentence).toBe('s');
-    expect(parsed.top_3_fixes).toEqual(['a', 'b', 'c']);
+  test('buildDiagnosisResponse summarises the PRS state', () => {
+    const r = _internal.buildDiagnosisResponse(SAMPLE_PRS);
+    expect(r.summary_sentence).toMatch(/27\/100/);
+    expect(r.summary_sentence).toMatch(/red/);
+    expect(r.top_3_fixes.length).toBeGreaterThan(0);
   });
 
-  test('parseLLMJson returns null for unparseable text', () => {
-    expect(_internal.parseLLMJson('this is not json')).toBeNull();
+  test('buildFixRequestResponse leads with the highest-RPV fix', () => {
+    const r = _internal.buildFixRequestResponse(SAMPLE_PRS);
+    expect(r.summary_sentence).toContain('Create 3 manual audience segments');
+  });
+
+  test('buildDimensionDrillResponse routes BRUID queries to bruid_match_rate', () => {
+    const r = _internal.buildDimensionDrillResponse(SAMPLE_PRS, 'why is my BRUID so low?');
+    expect(r.summary_sentence).toContain('BRUID Match Rate');
   });
 });
 
-describe('llm-explainer — agent loop with mocked SDK', () => {
-  const context = {
-    query: 'Why is my BRUID score so low?',
-    intent: 'dimension-drill',
-    prs_snapshot: { composite_score: 52, rag_status: 'amber' },
-    tool_hint: 'drill into dimension',
-  };
-
-  test('one round of tool_use, then final text — returns shaped result', async () => {
-    // Turn 1: Claude requests a tool.
-    mockCreate.mockResolvedValueOnce({
-      stop_reason: 'tool_use',
-      content: [
-        {
-          type: 'tool_use',
-          id: 'tu_1',
-          name: 'fetchBRUIDMatchRate',
-          input: {},
-        },
-      ],
+describe('explainWithLoomi — Loomi-only path', () => {
+  test('returns the M3→M4 contract shape for a diagnosis query', async () => {
+    const result = await explainWithLoomi({
+      query: 'Why is my personalisation not working?',
+      intent: 'diagnosis',
+      prs_snapshot: SAMPLE_PRS,
     });
-    // Turn 2: Claude returns the final JSON.
-    mockCreate.mockResolvedValueOnce({
-      stop_reason: 'end_turn',
-      content: [
-        {
-          type: 'text',
-          text:
-            '{"summary_sentence":"BRUID is low.","score_breakdown":"22%","top_3_fixes":["a","b","c"],"suggested_next_action":"Fix BRUID."}',
-        },
-      ],
-    });
-
-    const result = await explainWithClaude(context);
-
-    expect(mockCreate).toHaveBeenCalledTimes(2);
-    expect(result.llm_response.summary_sentence).toBe('BRUID is low.');
-    expect(result.llm_response.top_3_fixes).toEqual(['a', 'b', 'c']);
-    expect(result.reasoning_trace).toHaveLength(1);
-    expect(result.reasoning_trace[0]).toEqual(
-      expect.objectContaining({
-        tool_name: 'fetchBRUIDMatchRate',
-        tool_input: {},
-      }),
-    );
+    expect(result.llm_response).toEqual(expect.objectContaining({
+      summary_sentence: expect.any(String),
+      score_breakdown: expect.any(String),
+      top_3_fixes: expect.any(Array),
+      suggested_next_action: expect.any(String),
+    }));
+    expect(Array.isArray(result.reasoning_trace)).toBe(true);
+    expect(result.reasoning_trace.length).toBe(SAMPLE_PRS.dimensions.length);
+    expect(mockAsk).not.toHaveBeenCalled();
   });
 
-  test('tool_choice is auto on every call (Option A invariant)', async () => {
-    mockCreate.mockResolvedValueOnce({
-      stop_reason: 'end_turn',
-      content: [{ type: 'text', text: '{}' }],
+  test('catalog-flavoured queries also call the Loomi Conversations Server', async () => {
+    mockAsk.mockResolvedValueOnce({ data: [
+      { _id: 'p1', properties: { name: 'Gold Necklace' } },
+      { _id: 'p2', properties: { name: 'Pearl Studs' } },
+    ] });
+
+    const result = await explainWithLoomi({
+      query: 'show me necklaces for sarah',
+      intent: 'archetype-compare',
+      prs_snapshot: SAMPLE_PRS,
     });
 
-    await explainWithClaude(context);
-
-    const callArgs = mockCreate.mock.calls[0][0];
-    expect(callArgs.tool_choice).toEqual({ type: 'auto' });
-    expect(callArgs.max_tokens).toBe(1500);
-    expect(callArgs.model).toBeDefined();
-    expect(Array.isArray(callArgs.tools)).toBe(true);
-    expect(callArgs.tools).toHaveLength(5);
+    expect(mockAsk).toHaveBeenCalledTimes(1);
+    expect(mockAsk.mock.calls[0][0]).toEqual(expect.objectContaining({ query: expect.any(String) }));
+    expect(result.reasoning_trace.some((s: any) => s.tool_name === 'askLoomiConversations')).toBe(true);
   });
 
-  test('multiple tool_use blocks in a single turn are all executed', async () => {
-    mockCreate.mockResolvedValueOnce({
-      stop_reason: 'tool_use',
-      content: [
-        {
-          type: 'tool_use',
-          id: 'tu_a',
-          name: 'fetchBRUIDMatchRate',
-          input: {},
-        },
-        {
-          type: 'tool_use',
-          id: 'tu_b',
-          name: 'fetchAutoSegmentCoverage',
-          input: {},
-        },
-      ],
-    });
-    mockCreate.mockResolvedValueOnce({
-      stop_reason: 'end_turn',
-      content: [{ type: 'text', text: '{"summary_sentence":"done"}' }],
-    });
-
-    const result = await explainWithClaude(context);
-    expect(result.reasoning_trace.length).toBe(2);
-    expect(result.reasoning_trace.map((s: any) => s.tool_name)).toEqual([
-      'fetchBRUIDMatchRate',
-      'fetchAutoSegmentCoverage',
-    ]);
-  });
-
-  test('uses CLAUDE_MODEL env override if set, otherwise default', async () => {
-    const original = process.env.CLAUDE_MODEL;
-    process.env.CLAUDE_MODEL = 'claude-test-override';
-    try {
-      mockCreate.mockResolvedValueOnce({
-        stop_reason: 'end_turn',
-        content: [{ type: 'text', text: '{}' }],
-      });
-      await explainWithClaude(context);
-      expect(mockCreate.mock.calls[0][0].model).toBe('claude-test-override');
-    } finally {
-      if (original === undefined) {
-        delete process.env.CLAUDE_MODEL;
-      } else {
-        process.env.CLAUDE_MODEL = original;
-      }
-    }
-
-    mockCreate.mockResolvedValueOnce({
-      stop_reason: 'end_turn',
-      content: [{ type: 'text', text: '{}' }],
-    });
-    await explainWithClaude(context);
-    expect(mockCreate.mock.calls[1][0].model).toBe(_internal.DEFAULT_MODEL);
-    expect(_internal.DEFAULT_MODEL).toBe('claude-sonnet-4-20250514');
+  test('explainWithClaude is an alias that no longer calls Anthropic', async () => {
+    const r1 = await explainWithLoomi({ query: 'what to fix', intent: 'fix-request', prs_snapshot: SAMPLE_PRS });
+    const r2 = await explainWithClaude({ query: 'what to fix', intent: 'fix-request', prs_snapshot: SAMPLE_PRS });
+    expect(r1.llm_response.summary_sentence).toBe(r2.llm_response.summary_sentence);
   });
 });
 

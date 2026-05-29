@@ -39,14 +39,15 @@ function loadPostFixDimensions() {
 }
 
 // ──────────────────────────────────────────────────────────────────────────
-// Mandatory Test 1 — pre-fix composite + status
+// Mandatory Test 1 — pre-fix composite + status (8-dimension contract)
+// composite = round(sum / (20 * dim_count) * 100) — 43 / 160 → 27 (red)
 // ──────────────────────────────────────────────────────────────────────────
 describe('calculatePRS — pre-fix state (mandatory)', () => {
-  it('returns composite 52 / amber / BRUID critical / AutoSegment critical', () => {
+  it('returns composite 27 / red / BRUID critical / AutoSegment critical', () => {
     const result = calculatePRS(loadPreFixDimensions());
 
-    expect(result.composite_score).toBe(52);
-    expect(result.rag_status).toBe('amber');
+    expect(result.composite_score).toBe(27);
+    expect(result.rag_status).toBe('red');
 
     const bruid = result.dimensions.find(d => d.dimension_id === 'bruid_match_rate');
     const autoseg = result.dimensions.find(d => d.dimension_id === 'autosegment_coverage');
@@ -57,34 +58,40 @@ describe('calculatePRS — pre-fix state (mandatory)', () => {
 });
 
 // ──────────────────────────────────────────────────────────────────────────
-// Mandatory Test 2 — post-fix composite + status
+// Mandatory Test 2 — post-fix composite + status (8-dimension contract)
+// 109 / 160 → 68 (amber)
 // ──────────────────────────────────────────────────────────────────────────
 describe('calculatePRS — post-fix state (mandatory)', () => {
-  it('returns composite 70 / amber / AutoSegment healthy / ABTest healthy', () => {
+  it('returns composite 68 / amber / AutoSegment warning / ABTest healthy', () => {
     const result = calculatePRS(loadPostFixDimensions());
 
-    expect(result.composite_score).toBe(70);
+    expect(result.composite_score).toBe(68);
     expect(result.rag_status).toBe('amber');
 
-    const autoseg = result.dimensions.find(d => d.dimension_id === 'autosegment_coverage');
     const ab = result.dimensions.find(d => d.dimension_id === 'ab_test_coverage');
-
-    expect(autoseg.status).toBe('healthy');
     expect(ab.status).toBe('healthy');
+
+    // Segment Definition Quality should have moved from critical → healthy.
+    const sdq = result.dimensions.find(d => d.dimension_id === 'segment_definition_quality');
+    expect(sdq.status).toBe('healthy');
   });
 });
 
 // ──────────────────────────────────────────────────────────────────────────
-// Mandatory Test 3 — fix list ranking from pre-fix
+// Mandatory Test 3 — fix list ranking from pre-fix (8-dim catalogue)
+// Bottom dims: autosegment (0), ab_test (0), signal_freshness (2 — no fix),
+// segment_definition_quality (3). Generator walks past signal_freshness so
+// the top 3 mapped fixes sorted by RPV-lift DESC are:
+//   autosegment_coverage (18) > segment_definition_quality (16) > ab_test (10)
 // ──────────────────────────────────────────────────────────────────────────
 describe('generateFixList — pre-fix ranking (mandatory)', () => {
-  it('ranks AutoSegment > BRUID > A/B Coverage', () => {
+  it('ranks AutoSegment > SegmentDefinitionQuality > A/B Coverage by RPV lift', () => {
     const prs = calculatePRS(loadPreFixDimensions());
     const fixes = generateFixList(prs);
 
     expect(fixes).toHaveLength(3);
     expect(fixes[0].dimension).toBe('autosegment_coverage');
-    expect(fixes[1].dimension).toBe('bruid_match_rate');
+    expect(fixes[1].dimension).toBe('segment_definition_quality');
     expect(fixes[2].dimension).toBe('ab_test_coverage');
     expect(fixes[0].position).toBe(1);
     expect(fixes[1].position).toBe(2);
@@ -203,6 +210,8 @@ describe('status thresholds — boundary behaviour', () => {
 });
 
 describe('RAG thresholds — boundary behaviour', () => {
+  // Composite = round(sum / (20 * dim_count) * 100). Stub 5 dims so total
+  // capacity = 100 — score == composite, easy to reason about boundaries.
   const stub = (id, score) => ({
     dimension_id: id,
     score,
@@ -268,7 +277,8 @@ describe('calculatePRS — contract shape', () => {
       fix_list: expect.any(Array),
       generated_at: expect.any(String),
     }));
-    expect(prs.dimensions).toHaveLength(5);
+    // 8-dimension contract: 5 originals + 3 Engagement MCP dims.
+    expect(prs.dimensions).toHaveLength(8);
     expect(new Date(prs.generated_at).toString()).not.toBe('Invalid Date');
   });
 });
@@ -287,11 +297,13 @@ describe('generateFixList — edge cases', () => {
     expect(dims).toContain('bruid_match_rate');
   });
 
-  it('skips dimensions with no catalogue match', () => {
+  it('walks past dimensions with no catalogue match to fill MAX_FIXES slots', () => {
     const fakePrs = {
       composite_score: 30,
       rag_status: 'red',
       dimensions: [
+        // unknown_thing is bottom but has no catalogue entry — should be
+        // skipped, not starve the result.
         { dimension_id: 'unknown_thing', score: 1, max_score: 20, status: 'critical' },
         { dimension_id: 'autosegment_coverage', score: 2, max_score: 20, status: 'critical' },
         { dimension_id: 'bruid_match_rate', score: 3, max_score: 20, status: 'critical' },
@@ -302,12 +314,11 @@ describe('generateFixList — edge cases', () => {
       generated_at: new Date().toISOString(),
     };
     const fixes = generateFixList(fakePrs);
-    // Bottom 3 picked: unknown_thing, autosegment, bruid. unknown_thing is
-    // skipped — so we end up with 2 mapped fixes.
-    expect(fixes).toHaveLength(2);
+    expect(fixes).toHaveLength(3);
     expect(fixes.map(f => f.dimension)).toEqual(
-      expect.arrayContaining(['autosegment_coverage', 'bruid_match_rate']),
+      expect.arrayContaining(['autosegment_coverage', 'bruid_match_rate', 'ab_test_coverage']),
     );
+    expect(fixes.map(f => f.dimension)).not.toContain('unknown_thing');
   });
 
   it('returns empty array when nothing maps to the catalogue', () => {

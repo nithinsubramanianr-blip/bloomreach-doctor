@@ -1,11 +1,11 @@
 {
   "_meta": {
-    "description": "POST-FIX PRS demo state. Demo END state after Option X rule activation and Doctor recommendations applied.",
+    "description": "POST-FIX PRS demo state. After Option X rule activation + 3 manual segments created + A/B tests configured + event instrumentation + profile enrichment kicked off. 8 dimensions total, all contribute.",
     "state": "post_fix",
     "locked": true,
-    "generated_at": "2026-05-22T00:00:00Z"
+    "generated_at": "2026-05-29T00:00:00Z"
   },
-  "composite_score": 70,
+  "composite_score": 68,
   "rag_status": "amber",
   "rag_thresholds": {
     "red": { "min": 0, "max": 49 },
@@ -18,7 +18,7 @@
       "dimension_id": "bruid_match_rate",
       "dimension_name": "BRUID Match Rate",
       "raw_value": 0.22,
-      "raw_label": "22% — no change (strategic fix, not in build window)",
+      "raw_label": "22% — no change (strategic Phase 2 fix)",
       "normalised_score": 8,
       "max_score": 20,
       "status": "critical",
@@ -27,52 +27,52 @@
       "change_from_pre_fix": 0,
       "change_driver": "No change — BRUID persistence is a Phase 2 strategic fix",
       "is_synthetic": true,
-      "timestamp": "2026-05-22T00:00:00Z"
+      "timestamp": "2026-05-29T00:00:00Z"
     },
     {
       "dimension_id": "autosegment_coverage",
       "dimension_name": "AutoSegment Coverage",
       "raw_value": 0.68,
-      "raw_label": "68% of sessions now assigned to a named AutoSegment",
-      "normalised_score": 16,
-      "max_score": 20,
-      "status": "healthy",
-      "data_source": "marketing_mcp",
-      "client": "marketing-mcp-client",
-      "change_from_pre_fix": 10,
-      "change_driver": "3 manual segments created in Engagement + boost rules activated in Discovery",
-      "is_synthetic": true,
-      "timestamp": "2026-05-22T00:00:00Z"
-    },
-    {
-      "dimension_id": "signal_freshness",
-      "dimension_name": "Signal Freshness",
-      "raw_value": 0.58,
-      "raw_label": "58% — no change",
+      "raw_label": "68% of sessions now assigned to a named segment",
       "normalised_score": 14,
       "max_score": 20,
       "status": "warning",
       "data_source": "marketing_mcp",
       "client": "marketing-mcp-client",
-      "change_from_pre_fix": 0,
-      "change_driver": "No change",
+      "change_from_pre_fix": 14,
+      "change_driver": "3 manual segments created in Engagement + boost rules activated in Discovery",
       "is_synthetic": true,
-      "timestamp": "2026-05-22T00:00:00Z"
+      "timestamp": "2026-05-29T00:00:00Z"
+    },
+    {
+      "dimension_id": "signal_freshness",
+      "dimension_name": "Signal Freshness",
+      "raw_value": 0.58,
+      "raw_label": "58% of customers active within freshness window",
+      "normalised_score": 12,
+      "max_score": 20,
+      "status": "warning",
+      "data_source": "marketing_mcp",
+      "client": "marketing-mcp-client",
+      "change_from_pre_fix": 10,
+      "change_driver": "Re-engagement campaigns triggered after segment creation",
+      "is_synthetic": true,
+      "timestamp": "2026-05-29T00:00:00Z"
     },
     {
       "dimension_id": "rule_conflicts",
       "dimension_name": "Rule Conflicts",
       "raw_value": 0.90,
-      "raw_label": "90% conflict-free — minor decrease from adding 3 new rules",
-      "normalised_score": 16,
+      "raw_label": "90% conflict-free — 3 new rules added",
+      "normalised_score": 18,
       "max_score": 20,
       "status": "healthy",
       "data_source": "discovery_api",
       "client": "discovery-client",
-      "change_from_pre_fix": -2,
+      "change_from_pre_fix": 0,
       "change_driver": "3 new boost rules added — minor conflict increase from 5% → 10%",
       "is_synthetic": true,
-      "timestamp": "2026-05-22T00:00:00Z"
+      "timestamp": "2026-05-29T00:00:00Z"
     },
     {
       "dimension_id": "ab_test_coverage",
@@ -84,14 +84,60 @@
       "status": "healthy",
       "data_source": "analytics_mcp",
       "client": "analytics-mcp-client",
-      "change_from_pre_fix": 10,
+      "change_from_pre_fix": 16,
       "change_driver": "A/B tests set up to measure impact of the 3 newly activated boost rules",
       "is_synthetic": true,
-      "timestamp": "2026-05-22T00:00:00Z"
+      "timestamp": "2026-05-29T00:00:00Z"
+    },
+    {
+      "dimension_id": "segment_definition_quality",
+      "dimension_name": "Segment Definition Quality",
+      "raw_value": 0.80,
+      "raw_label": "Segments rebuilt with ≥3 conditions + Discovery exposure",
+      "normalised_score": 16,
+      "max_score": 20,
+      "status": "healthy",
+      "data_source": "engagement_mcp",
+      "client": "engagement-client",
+      "change_from_pre_fix": 13,
+      "change_driver": "Multi-condition behavioural+recency segments exposed to Discovery",
+      "is_synthetic": true,
+      "timestamp": "2026-05-29T00:00:00Z"
+    },
+    {
+      "dimension_id": "profile_completeness",
+      "dimension_name": "Profile Completeness",
+      "raw_value": 0.55,
+      "raw_label": "55% — email capture banner + post-purchase prompt lifting identified ratio",
+      "normalised_score": 11,
+      "max_score": 20,
+      "status": "warning",
+      "data_source": "engagement_mcp",
+      "client": "engagement-client",
+      "change_from_pre_fix": 7,
+      "change_driver": "Email capture banner + checkout email-required + post-purchase profile prompt",
+      "is_synthetic": true,
+      "timestamp": "2026-05-29T00:00:00Z"
+    },
+    {
+      "dimension_id": "behavioral_signal_richness",
+      "dimension_name": "Behavioral Signal Richness",
+      "raw_value": 0.70,
+      "raw_label": "7+ distinct event types per active user — search, wishlist, survey instrumented",
+      "normalised_score": 14,
+      "max_score": 20,
+      "status": "warning",
+      "data_source": "engagement_mcp",
+      "client": "engagement-client",
+      "change_from_pre_fix": 6,
+      "change_driver": "Search, wishlist_add, cart_update breakdowns, and post-purchase surveys instrumented",
+      "is_synthetic": true,
+      "timestamp": "2026-05-29T00:00:00Z"
     }
   ],
   "score_verification": {
-    "sum_check": "8+16+14+16+16 = 70 ✓",
-    "composite_score_arithmetic": 70
+    "sum_check": "8 + 14 + 12 + 18 + 16 + 16 + 11 + 14 = 109 of 160 available points",
+    "composite_calc": "round(109 / 160 × 100) = 68",
+    "composite_score": 68
   }
 }

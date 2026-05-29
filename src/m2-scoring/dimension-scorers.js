@@ -140,12 +140,51 @@ function scoreABCoverage(input) {
   );
 }
 
+function scoreSegmentDefinitionQuality(input) {
+  const { rawValue, score, status } = resolveScore(input);
+  return buildResult(
+    'segment_definition_quality',
+    rawValue,
+    score,
+    status,
+    explain('Segment definition quality', rawValue, score, status,
+      'Conditions-per-segment depth weighted by Discovery exposure.'),
+  );
+}
+
+function scoreProfileCompleteness(input) {
+  const { rawValue, score, status } = resolveScore(input);
+  return buildResult(
+    'profile_completeness',
+    rawValue,
+    score,
+    status,
+    explain('Profile completeness', rawValue, score, status,
+      'Share of customers with an enriched (identified) profile.'),
+  );
+}
+
+function scoreBehavioralSignalRichness(input) {
+  const { rawValue, score, status } = resolveScore(input);
+  return buildResult(
+    'behavioral_signal_richness',
+    rawValue,
+    score,
+    status,
+    explain('Behavioral signal richness', rawValue, score, status,
+      'Average distinct event types captured per active user vs target.'),
+  );
+}
+
 module.exports = {
   scoreBRUID,
   scoreAutoSegment,
   scoreSignalFreshness,
   scoreRuleConflicts,
   scoreABCoverage,
+  scoreSegmentDefinitionQuality,
+  scoreProfileCompleteness,
+  scoreBehavioralSignalRichness,
   // Exported for unit testing only — not part of the M2→M4 contract.
   _statusFromScore: statusFromScore,
 };

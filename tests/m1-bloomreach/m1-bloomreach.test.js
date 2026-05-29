@@ -47,7 +47,13 @@ const REQUIRED_DIM_FIELDS = [
   'is_synthetic',
 ];
 const VALID_STATUSES = ['critical', 'warning', 'healthy'];
-const VALID_DATA_SOURCES = ['discovery_api', 'engagement_api', 'marketing_mcp', 'analytics_mcp'];
+const VALID_DATA_SOURCES = [
+  'discovery_api',
+  'engagement_api',
+  'engagement_mcp',
+  'marketing_mcp',
+  'analytics_mcp',
+];
 
 function assertDimensionShape(dim) {
   REQUIRED_DIM_FIELDS.forEach((f) => expect(dim).toHaveProperty(f));
@@ -169,17 +175,19 @@ describe('M1 — dimension fetchers (synthetic path)', () => {
     expect(dim.data_source).toBe('analytics_mcp');
   });
 
-  test('pre-fix demo values match locked CLAUDE.md scores', async () => {
+  test('pre-fix demo values match locked snapshot scores', async () => {
     process.env.DEMO_STATE = 'pre_fix';
     const bruid = await fetchBRUIDMatchRate();
     const autoSeg = await fetchAutoSegmentCoverage();
     const ab = await fetchABTestCoverage();
+    // Locked harvested values: BRUID 8 (Discovery placeholder),
+    // AutoSegment 0 (no segmentations exist), A/B 0 (no experiments).
     expect(bruid.normalised_score).toBe(8);
-    expect(autoSeg.normalised_score).toBe(6);
-    expect(ab.normalised_score).toBe(6);
+    expect(autoSeg.normalised_score).toBe(0);
+    expect(ab.normalised_score).toBe(0);
   });
 
-  test('post-fix demo values match locked CLAUDE.md scores', async () => {
+  test('post-fix demo values match locked snapshot scores', async () => {
     process.env.DEMO_STATE = 'post_fix';
     // Reset module cache so the loader picks up the new DEMO_STATE.
     jest.resetModules();
@@ -189,16 +197,17 @@ describe('M1 — dimension fetchers (synthetic path)', () => {
     const an = require(path.join(M1_DIR, 'analytics-mcp-client'));
     const autoSeg = await ms.fetchAutoSegmentCoverage();
     const ab = await an.fetchABTestCoverage();
-    expect(autoSeg.normalised_score).toBe(16);
+    // Post-fix: AutoSegment 14 (warning), A/B 16 (healthy) per locked snapshot.
+    expect(autoSeg.normalised_score).toBe(14);
     expect(ab.normalised_score).toBe(16);
   });
 });
 
 describe('M1 — prs-data-fetcher', () => {
-  test('fetchAllDimensions returns array of exactly 5 items', async () => {
+  test('fetchAllDimensions returns array of exactly 8 items', async () => {
     const dims = await fetchAllDimensions();
     expect(Array.isArray(dims)).toBe(true);
-    expect(dims).toHaveLength(5);
+    expect(dims).toHaveLength(8);
     dims.forEach(assertDimensionShape);
   });
 
@@ -210,6 +219,9 @@ describe('M1 — prs-data-fetcher', () => {
       'signal_freshness',
       'rule_conflicts',
       'ab_test_coverage',
+      'segment_definition_quality',
+      'profile_completeness',
+      'behavioral_signal_richness',
     ]);
   });
 });

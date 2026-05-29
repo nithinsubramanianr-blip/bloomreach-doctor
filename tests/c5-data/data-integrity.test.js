@@ -23,21 +23,25 @@ const products = require(path.join(DATA_DIR, 'products.json'));
 const segments = require(path.join(DATA_DIR, 'segments.json'));
 
 describe('C5 — PRS demo states', () => {
-  test('prs_pre_fix.json composite_score === 52', () => {
-    expect(prsPre.composite_score).toBe(52);
+  // 8-dimension contract: 5 originals + 3 Engagement MCP dims.
+  // Composite = round(sum / (20 × dim_count) × 100).
+  // Pre-fix: 43/160 → 27 (red). Post-fix: 109/160 → 68 (amber).
+
+  test('prs_pre_fix.json composite_score === 27', () => {
+    expect(prsPre.composite_score).toBe(27);
   });
 
-  test('prs_pre_fix.json rag_status === "amber"', () => {
-    expect(prsPre.rag_status).toBe('amber');
+  test('prs_pre_fix.json rag_status === "red"', () => {
+    expect(prsPre.rag_status).toBe('red');
   });
 
   test('prs_pre_fix.json boost_rules_state === "all_inactive"', () => {
     expect(prsPre.boost_rules_state).toBe('all_inactive');
   });
 
-  test('prs_pre_fix.json has exactly 5 dimensions', () => {
+  test('prs_pre_fix.json has exactly 8 dimensions', () => {
     expect(Array.isArray(prsPre.dimensions)).toBe(true);
-    expect(prsPre.dimensions).toHaveLength(5);
+    expect(prsPre.dimensions).toHaveLength(8);
   });
 
   test('prs_pre_fix.json BRUID and AutoSegment status === "critical"', () => {
@@ -49,31 +53,31 @@ describe('C5 — PRS demo states', () => {
     expect(autoseg.status).toBe('critical');
   });
 
-  test('prs_pre_fix.json dimension scores sum to 52', () => {
+  test('prs_pre_fix.json normalised scores sum to 43 (out of 160 max)', () => {
     const sum = prsPre.dimensions.reduce((acc, d) => acc + d.normalised_score, 0);
-    expect(sum).toBe(52);
+    expect(sum).toBe(43);
   });
 
-  test('prs_post_fix.json composite_score === 70', () => {
-    expect(prsPost.composite_score).toBe(70);
+  test('prs_post_fix.json composite_score === 68', () => {
+    expect(prsPost.composite_score).toBe(68);
   });
 
   test('prs_post_fix.json boost_rules_state === "all_active"', () => {
     expect(prsPost.boost_rules_state).toBe('all_active');
   });
 
-  test('prs_post_fix.json AutoSegment and ABTest status === "healthy"', () => {
-    const autoseg = prsPost.dimensions.find((d) => d.dimension_id === 'autosegment_coverage');
-    const abtest = prsPost.dimensions.find((d) => d.dimension_id === 'ab_test_coverage');
-    expect(autoseg).toBeDefined();
-    expect(abtest).toBeDefined();
-    expect(autoseg.status).toBe('healthy');
-    expect(abtest.status).toBe('healthy');
+  test('prs_post_fix.json ABTest and SegmentDefinitionQuality status === "healthy"', () => {
+    const ab = prsPost.dimensions.find((d) => d.dimension_id === 'ab_test_coverage');
+    const sdq = prsPost.dimensions.find((d) => d.dimension_id === 'segment_definition_quality');
+    expect(ab).toBeDefined();
+    expect(sdq).toBeDefined();
+    expect(ab.status).toBe('healthy');
+    expect(sdq.status).toBe('healthy');
   });
 
-  test('prs_post_fix.json dimension scores sum to 70', () => {
+  test('prs_post_fix.json normalised scores sum to 109 (out of 160 max)', () => {
     const sum = prsPost.dimensions.reduce((acc, d) => acc + d.normalised_score, 0);
-    expect(sum).toBe(70);
+    expect(sum).toBe(109);
   });
 
   test('every dimension object carries is_synthetic === true (ADR-001-2)', () => {
@@ -146,9 +150,13 @@ describe('C5 — products catalogue', () => {
 });
 
 describe('C5 — fix catalogue', () => {
-  test('exactly 3 fixes', () => {
+  // 6-fix catalogue: one fix per dimension that has a remediation path.
+  // signal_freshness and rule_conflicts deliberately do not have catalogue
+  // entries (no operational fix available to a single PM).
+
+  test('exactly 6 fixes', () => {
     expect(Array.isArray(fixCatalogue.fixes)).toBe(true);
-    expect(fixCatalogue.fixes).toHaveLength(3);
+    expect(fixCatalogue.fixes).toHaveLength(6);
   });
 
   test('rank 1 fix is linked to autosegment_coverage', () => {
@@ -157,16 +165,21 @@ describe('C5 — fix catalogue', () => {
     expect(rank1.dimension_linked).toBe('autosegment_coverage');
   });
 
-  test('rank 2 fix is linked to bruid_match_rate', () => {
-    const rank2 = fixCatalogue.fixes.find((f) => f.rank === 2);
-    expect(rank2).toBeDefined();
-    expect(rank2.dimension_linked).toBe('bruid_match_rate');
+  test('catalogue includes fixes for all three new Engagement MCP dimensions', () => {
+    const dims = fixCatalogue.fixes.map((f) => f.dimension_linked);
+    expect(dims).toEqual(expect.arrayContaining([
+      'segment_definition_quality',
+      'profile_completeness',
+      'behavioral_signal_richness',
+    ]));
   });
 
-  test('rank 3 fix is linked to ab_test_coverage', () => {
-    const rank3 = fixCatalogue.fixes.find((f) => f.rank === 3);
-    expect(rank3).toBeDefined();
-    expect(rank3.dimension_linked).toBe('ab_test_coverage');
+  test('catalogue still covers bruid_match_rate and ab_test_coverage', () => {
+    const dims = fixCatalogue.fixes.map((f) => f.dimension_linked);
+    expect(dims).toEqual(expect.arrayContaining([
+      'bruid_match_rate',
+      'ab_test_coverage',
+    ]));
   });
 });
 

@@ -42,6 +42,8 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       // /loomi-mcp is served by the loomiAuth plugin (with OAuth + token refresh).
       // /exponea-api is kept for any other Engagement REST endpoints used by M1.
+      // /loomi-conversations is the Bloomreach Loomi Conversations Server MCP
+      // endpoint — no auth required for the prototype.
       proxy: {
         '/exponea-api': {
           target: env.BLOOMREACH_ENGAGEMENT_BASE_URL || 'https://uqa.app.exponea.dev',
@@ -58,6 +60,13 @@ export default defineConfig(({ mode }) => {
               }
             });
           },
+        },
+        '/loomi-conversations': {
+          target: env.BLOOMREACH_LOOMI_CONVERSATIONS_URL
+            || 'https://uqa.api.exponea.dev/cocoaas/public/api/clarity-search/v1/mcp/019d4917-3c76-7479-9f00-06c620b231bb',
+          changeOrigin: true,
+          secure: true,
+          rewrite: (path: string) => path.replace(/^\/loomi-conversations/, ''),
         },
       },
     },

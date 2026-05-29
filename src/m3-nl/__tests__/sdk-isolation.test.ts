@@ -36,7 +36,11 @@ describe('Anthropic SDK import isolation (Invariant #5)', () => {
     );
   });
 
-  test('only llm-explainer.js references @anthropic-ai/sdk', () => {
+  // Ask the Doctor no longer talks to Anthropic — the chat now runs against
+  // the live PRS state + Loomi Conversations Server. Invariant #5 evolves
+  // from "only llm-explainer may import the SDK" to "no M3 file may import
+  // the SDK".
+  test('no M3 file references @anthropic-ai/sdk', () => {
     const importers: string[] = [];
     for (const file of sourceFiles) {
       const text = fs.readFileSync(file, 'utf8');
@@ -44,7 +48,7 @@ describe('Anthropic SDK import isolation (Invariant #5)', () => {
         importers.push(path.basename(file));
       }
     }
-    expect(importers).toEqual(['llm-explainer.js']);
+    expect(importers).toEqual([]);
   });
 });
 

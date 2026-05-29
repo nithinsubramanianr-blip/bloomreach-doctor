@@ -53,22 +53,30 @@ const SOURCE_LABELS: Record<string, string> = {
   discovery_api:  'Discovery API',
   marketing_mcp:  'Marketing MCP',
   analytics_mcp:  'Analytics MCP',
+  engagement_mcp: 'Engagement MCP',
+  engagement_api: 'Engagement API',
 };
 
 const DIM_DISPLAY: Record<string, string> = {
-  bruid_match_rate:      'BRUID Match Rate',
-  autosegment_coverage:  'AutoSegment Coverage',
-  signal_freshness:      'Signal Freshness',
-  rule_conflicts:        'Rule Conflicts',
-  ab_test_coverage:      'A/B Test Coverage',
+  bruid_match_rate:           'BRUID Match Rate',
+  autosegment_coverage:       'AutoSegment Coverage',
+  signal_freshness:           'Signal Freshness',
+  rule_conflicts:             'Rule Conflicts',
+  ab_test_coverage:           'A/B Test Coverage',
+  segment_definition_quality: 'Segment Definition Quality',
+  profile_completeness:       'Profile Completeness',
+  behavioral_signal_richness: 'Behavioral Signal Richness',
 };
 
 const DIM_DESCRIPTION: Record<string, string> = {
-  bruid_match_rate:      'Visitor recognition across sessions',
-  autosegment_coverage:  'Audience segments with active rules',
-  signal_freshness:      'Recency of behavioural signals',
-  rule_conflicts:        'Boost rules free of conflicts',
-  ab_test_coverage:      'Search experiments configured',
+  bruid_match_rate:           'Visitor recognition across sessions',
+  autosegment_coverage:       'Audience segments with active rules',
+  signal_freshness:           'Recency of behavioural signals',
+  rule_conflicts:             'Boost rules free of conflicts',
+  ab_test_coverage:           'Search experiments configured',
+  segment_definition_quality: 'Multi-condition depth + Discovery exposure',
+  profile_completeness:       'Customers with enriched, identified profiles',
+  behavioral_signal_richness: 'Distinct event types per active user',
 };
 
 const STATUS_PILL: Record<string, string> = {
@@ -91,7 +99,7 @@ const STATUS_BAR: Record<string, string> = {
 
 // Fix card left-border accent per rank
 const FIX_BORDER: Record<number, string> = {
-  1: '#0E7C7B',
+  1: '#7C3AED',
   2: '#F59E0B',
   3: '#94A3B8',
 };
@@ -215,7 +223,7 @@ function FixCard({ fix, onReview }: { fix: FixResult; onReview: (fix: FixResult)
       {/* Rank badge */}
       <div
         className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-base font-bold text-white shadow-sm"
-        style={{ backgroundColor: '#1B3A5C' }}
+        style={{ backgroundColor: '#2D1BB5' }}
         aria-label={rankLabel}
       >
         {fix.position}
@@ -227,7 +235,7 @@ function FixCard({ fix, onReview }: { fix: FixResult; onReview: (fix: FixResult)
           <p className="text-sm font-semibold text-slate-800 leading-snug">{fix.fix_title}</p>
           <span
             className="flex-shrink-0 rounded-full px-2 py-0.5 text-xs font-bold whitespace-nowrap"
-            style={{ backgroundColor: '#0E7C7B15', color: '#0E7C7B' }}
+            style={{ backgroundColor: '#7C3AED15', color: '#7C3AED' }}
           >
             +{fix.estimated_rpv_lift_pct_min}–{fix.estimated_rpv_lift_pct_max}% RPV
           </span>
@@ -251,7 +259,7 @@ function FixCard({ fix, onReview }: { fix: FixResult; onReview: (fix: FixResult)
         onClick={() => onReview(fix)}
         data-testid={`review-button-${fix.fix_id}`}
         className="flex-shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-1 transition-opacity"
-        style={{ backgroundColor: '#0E7C7B' }}
+        style={{ backgroundColor: '#7C3AED' }}
         aria-label={`Review fix: ${fix.fix_title}`}
       >
         Review →
@@ -370,7 +378,7 @@ function ScoreHero({
                 disabled={isRefreshing}
                 data-testid="refresh-score-button"
                 className="flex-shrink-0 flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 hover:border-slate-300 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-60 transition-all"
-                style={{ focusRingColor: '#0E7C7B' } as React.CSSProperties}
+                style={{ focusRingColor: '#7C3AED' } as React.CSSProperties}
                 aria-label="Refresh score from Bloomreach"
               >
                 <RefreshIcon spinning={isRefreshing ?? false} />
@@ -491,6 +499,8 @@ export default function PRSScorecard({
             <span>Marketing MCP</span>
             <span>·</span>
             <span>Analytics MCP</span>
+            <span>·</span>
+            <span>Engagement MCP</span>
           </div>
         </div>
         {dimensions.map(dim => (

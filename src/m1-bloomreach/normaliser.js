@@ -11,7 +11,13 @@
 'use strict';
 
 const VALID_STATUSES = ['critical', 'warning', 'healthy'];
-const VALID_DATA_SOURCES = ['discovery_api', 'engagement_api', 'marketing_mcp', 'analytics_mcp'];
+const VALID_DATA_SOURCES = [
+  'discovery_api',
+  'engagement_api',
+  'engagement_mcp',
+  'marketing_mcp',
+  'analytics_mcp',
+];
 
 /**
  * Typed error thrown by normaliseDimension when validation fails.

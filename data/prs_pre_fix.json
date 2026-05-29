@@ -1,13 +1,13 @@
 {
   "_meta": {
-    "description": "PRE-FIX PRS demo state. This is the demo START state — 52/100 Amber. Three boost rules INACTIVE. Locked canonical values.",
+    "description": "PRE-FIX PRS demo state. 8 dimensions total (5 original + 3 new Engagement MCP dimensions). All 8 contribute to the composite. Composite = round(sum / (20 * 8) * 100). Pre-fix locked snapshot — live MCP overrides these values at runtime when DATA_SOURCE=live.",
     "state": "pre_fix",
     "locked": true,
-    "generated_at": "2026-05-22T00:00:00Z",
-    "note": "Formula flag: round(raw×20) does not produce stated scores from stated raw values. e.g. round(0.22×20)=4 not 8. Architect must reconcile formula before Dev implements scorers."
+    "generated_at": "2026-05-29T00:00:00Z",
+    "scoring": "Per dimension: score = min(20, round(raw_value × 20)); status 0–8 critical, 9–14 warning, 15–20 healthy. Composite = round(sum_scores / (20 × dim_count) × 100). RAG: red <50, amber 50–74, green 75+."
   },
-  "composite_score": 52,
-  "rag_status": "amber",
+  "composite_score": 27,
+  "rag_status": "red",
   "rag_thresholds": {
     "red": { "min": 0, "max": 49 },
     "amber": { "min": 50, "max": 74 },
@@ -19,7 +19,7 @@
       "dimension_id": "bruid_match_rate",
       "dimension_name": "BRUID Match Rate",
       "raw_value": 0.22,
-      "raw_label": "22% of sessions have recognised BRUID cookie",
+      "raw_label": "22% of sessions have a recognised BRUID cookie",
       "normalised_score": 8,
       "max_score": 20,
       "status": "critical",
@@ -28,14 +28,14 @@
       "target_value": 0.70,
       "target_label": "70% target",
       "is_synthetic": true,
-      "timestamp": "2026-05-22T00:00:00Z"
+      "timestamp": "2026-05-29T00:00:00Z"
     },
     {
       "dimension_id": "autosegment_coverage",
       "dimension_name": "AutoSegment Coverage",
-      "raw_value": 0.14,
-      "raw_label": "14% of sessions assigned to a named AutoSegment",
-      "normalised_score": 6,
+      "raw_value": 5.0,
+      "raw_label": "0 segmentations exist in the project — 0% AutoSegment coverage",
+      "normalised_score": 0,
       "max_score": 20,
       "status": "critical",
       "data_source": "marketing_mcp",
@@ -43,22 +43,22 @@
       "target_value": 0.75,
       "target_label": "75% target",
       "is_synthetic": true,
-      "timestamp": "2026-05-22T00:00:00Z"
+      "timestamp": "2026-05-29T00:00:00Z"
     },
     {
       "dimension_id": "signal_freshness",
       "dimension_name": "Signal Freshness",
-      "raw_value": 0.58,
-      "raw_label": "58% of behavioural signals within freshness threshold",
-      "normalised_score": 14,
+      "raw_value": 0.1056,
+      "raw_label": "10.6% of customers active in last 90 days (13,010 of 123,164)",
+      "normalised_score": 2,
       "max_score": 20,
-      "status": "warning",
+      "status": "critical",
       "data_source": "marketing_mcp",
       "client": "marketing-mcp-client",
       "target_value": 0.80,
       "target_label": "80% target",
       "is_synthetic": true,
-      "timestamp": "2026-05-22T00:00:00Z"
+      "timestamp": "2026-05-29T00:00:00Z"
     },
     {
       "dimension_id": "rule_conflicts",
@@ -72,16 +72,16 @@
       "client": "discovery-client",
       "target_value": 1.0,
       "target_label": "100% target (zero conflicts)",
-      "note": "Higher raw_value = healthier. This is the highest-scoring dimension pre-fix — NOT a problem area.",
+      "note": "Higher raw_value = healthier.",
       "is_synthetic": true,
-      "timestamp": "2026-05-22T00:00:00Z"
+      "timestamp": "2026-05-29T00:00:00Z"
     },
     {
       "dimension_id": "ab_test_coverage",
       "dimension_name": "A/B Test Coverage",
-      "raw_value": 0.14,
-      "raw_label": "14% of personalisation decisions have active A/B tests",
-      "normalised_score": 6,
+      "raw_value": 0.0,
+      "raw_label": "0 experiments / A/B tests configured — 0% coverage",
+      "normalised_score": 0,
       "max_score": 20,
       "status": "critical",
       "data_source": "analytics_mcp",
@@ -89,11 +89,57 @@
       "target_value": 0.60,
       "target_label": "60% target",
       "is_synthetic": true,
-      "timestamp": "2026-05-22T00:00:00Z"
+      "timestamp": "2026-05-29T00:00:00Z"
+    },
+    {
+      "dimension_id": "segment_definition_quality",
+      "dimension_name": "Segment Definition Quality",
+      "raw_value": 0.167,
+      "raw_label": "2 segmentations exist, each with a single condition; 0/2 exposed to Discovery",
+      "normalised_score": 3,
+      "max_score": 20,
+      "status": "critical",
+      "data_source": "engagement_mcp",
+      "client": "engagement-client",
+      "target_value": 0.85,
+      "target_label": "≥3 conditions/segment, fully exposed to Discovery",
+      "is_synthetic": true,
+      "timestamp": "2026-05-29T00:00:00Z"
+    },
+    {
+      "dimension_id": "profile_completeness",
+      "dimension_name": "Profile Completeness",
+      "raw_value": 0.2045,
+      "raw_label": "25,187 of 123,164 customers (20.4%) have an email populated",
+      "normalised_score": 4,
+      "max_score": 20,
+      "status": "critical",
+      "data_source": "engagement_mcp",
+      "client": "engagement-client",
+      "target_value": 0.75,
+      "target_label": "75% target — identified profiles with enriched attributes",
+      "is_synthetic": true,
+      "timestamp": "2026-05-29T00:00:00Z"
+    },
+    {
+      "dimension_id": "behavioral_signal_richness",
+      "dimension_name": "Behavioral Signal Richness",
+      "raw_value": 0.40,
+      "raw_label": "28 event types defined; ~4 distinct event types per 90d-active user vs target 10",
+      "normalised_score": 8,
+      "max_score": 20,
+      "status": "critical",
+      "data_source": "engagement_mcp",
+      "client": "engagement-client",
+      "target_value": 1.0,
+      "target_label": "10+ distinct event types per active user",
+      "is_synthetic": true,
+      "timestamp": "2026-05-29T00:00:00Z"
     }
   ],
   "score_verification": {
-    "sum_check": "8+6+14+18+6 = 52 ✓",
-    "composite_score": 52
+    "sum_check": "8 + 0 + 2 + 18 + 0 + 3 + 4 + 8 = 43 of 160 available points",
+    "composite_calc": "round(43 / 160 × 100) = 27",
+    "composite_score": 27
   }
 }

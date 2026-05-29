@@ -113,7 +113,7 @@ export default function ScoreDial({ score, ragStatus, size = 180 }: ScoreDialPro
           dominantBaseline="middle"
           fontSize={size * 0.22}
           fontWeight="700"
-          fill="#1B3A5C"
+          fill="#2D1BB5"
         >
           {clampedScore}
         </text>

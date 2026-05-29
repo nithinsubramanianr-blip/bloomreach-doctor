@@ -94,16 +94,14 @@ export default function PLPPage() {
     setLastFetchedAt(new Date());
   }, []);
 
-  // Apply cookie and load on mount.
+  // Single effect: applies the persona cookie + loads products whenever the
+  // active persona changes (including initial mount). The discoveryClient
+  // dedupes in-flight calls so React 18 StrictMode's double-invoke still
+  // results in only one network round-trip per persona.
   useEffect(() => {
-    const initial = rawPersonas.find((p) => p.persona_id === activePersonaId);
-    if (initial) applyPersonaCookie(initial);
-    loadProducts(activePersonaId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    const persona = rawPersonas.find((p) => p.persona_id === activePersonaId);
+    if (persona) applyPersonaCookie(persona);
 
-  // Reload when persona switches.
-  useEffect(() => {
     let cancelled = false;
     setProducts(null);
     fetchProductsLive(activePersonaId).then((p) => {
@@ -131,7 +129,7 @@ export default function PLPPage() {
   }
 
   const brandLabel =
-    (import.meta as any)?.env?.VITE_APP_DEMO_BRAND ?? 'Kendra Scott';
+    (import.meta as any)?.env?.VITE_APP_DEMO_BRAND ?? 'Bounteous x Accolite';
 
   const formattedTime = lastFetchedAt
     ? lastFetchedAt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
@@ -142,8 +140,7 @@ export default function PLPPage() {
       {/* ── Header ── */}
       <header
         data-testid="plp-header"
-        className="flex h-16 items-center justify-between px-6 shadow-sm"
-        style={{ backgroundColor: '#1B3A5C' }}
+        className="ppd-header-gradient flex h-16 items-center justify-between px-6 shadow-lg"
       >
         <div className="flex items-center gap-4">
           <span className="text-lg font-bold text-white tracking-tight">{brandLabel}</span>
@@ -175,7 +172,7 @@ export default function PLPPage() {
             <div className="mt-1.5 flex items-center gap-2">
               <span
                 className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold text-white"
-                style={{ backgroundColor: '#0E7C7B' }}
+                style={{ backgroundColor: '#7C3AED' }}
               >
                 <span
                   className="h-1.5 w-1.5 rounded-full bg-white/80 animate-pulse"

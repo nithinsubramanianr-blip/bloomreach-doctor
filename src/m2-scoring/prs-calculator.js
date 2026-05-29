@@ -30,6 +30,9 @@ const {
   scoreSignalFreshness,
   scoreRuleConflicts,
   scoreABCoverage,
+  scoreSegmentDefinitionQuality,
+  scoreProfileCompleteness,
+  scoreBehavioralSignalRichness,
 } = require('./dimension-scorers');
 
 const SCORER_BY_DIMENSION = {
@@ -38,7 +41,12 @@ const SCORER_BY_DIMENSION = {
   signal_freshness: scoreSignalFreshness,
   rule_conflicts: scoreRuleConflicts,
   ab_test_coverage: scoreABCoverage,
+  segment_definition_quality: scoreSegmentDefinitionQuality,
+  profile_completeness: scoreProfileCompleteness,
+  behavioral_signal_richness: scoreBehavioralSignalRichness,
 };
+
+const MAX_SCORE_PER_DIMENSION = 20;
 
 function ragFromComposite(composite) {
   if (composite < 50) return 'red';
@@ -70,7 +78,12 @@ function calculatePRS(dimensionResults) {
   }
 
   const scored = dimensionResults.map(ensureScored);
-  const composite = scored.reduce((acc, d) => acc + d.score, 0);
+  // Composite normalised to a 0–100 scale: works for any dimension count.
+  const totalPoints = scored.reduce((acc, d) => acc + d.score, 0);
+  const maxPoints = scored.length * MAX_SCORE_PER_DIMENSION;
+  const composite = maxPoints > 0
+    ? Math.round((totalPoints / maxPoints) * 100)
+    : 0;
   const rag = ragFromComposite(composite);
 
   return {

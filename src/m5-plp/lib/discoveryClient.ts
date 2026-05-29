@@ -34,11 +34,62 @@ function readEndpoint(): string | undefined {
   }
 }
 
+function readDiscoveryConfig(): { accountId?: string; domainKey?: string } {
+  try {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    const env = import.meta?.env ?? {};
+    return {
+      accountId: env.VITE_DISCOVERY_ACCOUNT_ID as string | undefined,
+      domainKey: env.VITE_DISCOVERY_DOMAIN_KEY as string | undefined,
+    };
+  } catch {
+    return {};
+  }
+}
+
+// Normalises a raw Discovery search doc (uses BR standard field names pid/title)
+// to our internal DiscoveryProduct shape.
+function mapDiscoveryDoc(
+  doc: Record<string, unknown>,
+  persona: Persona,
+): DiscoveryProduct {
+  return {
+    product_id: (doc.pid ?? doc.product_id ?? '') as string,
+    name: (doc.title ?? doc.name ?? '') as string,
+    description: doc.description as string | undefined,
+    price: Number(doc.price ?? 0),
+    currency: 'USD',
+    category: doc.category as string | undefined,
+    price_band: doc.price_band as string | undefined,
+    gift_eligible: Boolean(doc.gift_eligible),
+    is_new_arrival: Boolean(doc.is_new_arrival),
+    is_bestseller: Boolean(doc.is_bestseller),
+    image_url: (doc.thumb_image ?? doc.image_url) as string | undefined,
+    is_personalised: persona !== 'guest',
+  };
+}
+
 function bruidToPersona(bruid: string | null): Persona {
   if (!bruid) return 'guest';
   if (bruid.includes('sarah')) return 'sarah';
   if (bruid.includes('alex')) return 'alex';
   return 'guest';
+}
+
+// Maps persona → Discovery ref_url segment value.
+// Discovery boost rules are configured to fire when ref_url matches these strings:
+//   new_prospecting  → boost is_bestseller = true
+//   gifting_intent   → boost gift_eligible = true
+//   high_value_returning → boost is_new_arrival = true OR price_band = premium
+const PERSONA_SEGMENT_MAP: Record<Persona, string> = {
+  guest: 'new_prospecting',
+  sarah: 'gifting_intent',
+  alex: 'high_value_returning',
+};
+
+function personaToRefUrl(bruid: string | null): string {
+  return PERSONA_SEGMENT_MAP[bruidToPersona(bruid)];
 }
 
 function boostScore(props: Record<string, unknown>, persona: Persona): number {
@@ -74,6 +125,9 @@ async function searchViaLoomiCatalog(
       'Loomi catalog not configured — BLOOMREACH_CATALOG_ID and BLOOMREACH_PROJECT_ID required',
     );
   }
+
+  // eslint-disable-next-line no-console
+  console.log(`[ppd:loomi-catalog] → list_catalog_items q="${query}" catalog="${catalogId}"`);
 
   const rpcBody = {
     jsonrpc: '2.0',
@@ -165,6 +219,9 @@ async function searchViaLoomiCatalog(
     .sort((a, b) => b.score - a.score)
     .map(({ product }) => product);
 
+  // eslint-disable-next-line no-console
+  console.log(`[ppd:loomi-catalog] ← ${products.length} products (source: loomi-catalog)`);
+
   return { query, total: products.length, products };
 }
 
@@ -190,11 +247,32 @@ function parseMcpResponse(raw: string): any {
   throw new Error('Loomi MCP: unparseable response');
 }
 
+// In-flight dedup keyed by `${query}|${bruid}`. React 18 StrictMode invokes
+// effects twice in dev, and PLPPage's mount + persona-change effects can race
+// on the same persona. We share the inflight promise so concurrent callers
+// hit one network round-trip instead of two.
+const _inflight: Map<string, Promise<DiscoverySearchResult>> = new Map();
+
 /**
  * Calls Discovery search. Throws (or aborts) on timeout / network error.
  * Callers are responsible for catching and falling back to resultCache.
  */
 export async function search(
+  query: string,
+  bruid: string | null,
+  signal?: AbortSignal,
+  timeoutMs: number = DEFAULT_TIMEOUT_MS,
+): Promise<DiscoverySearchResult> {
+  const dedupKey = `${query}|${bruid ?? ''}`;
+  const existing = _inflight.get(dedupKey);
+  if (existing) return existing;
+  const pending = _searchUncached(query, bruid, signal, timeoutMs)
+    .finally(() => { _inflight.delete(dedupKey); });
+  _inflight.set(dedupKey, pending);
+  return pending;
+}
+
+async function _searchUncached(
   query: string,
   bruid: string | null,
   signal?: AbortSignal,
@@ -216,40 +294,89 @@ export async function search(
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const url = new URL(endpoint);
-    url.searchParams.set('q', query);
+    const persona = bruidToPersona(bruid);
+    const segment = personaToRefUrl(bruid); // e.g. "gifting_intent"
+    const { accountId, domainKey } = readDiscoveryConfig();
+
+    const reqUrl = new URL(endpoint);
+    reqUrl.searchParams.set('q', query);
+    reqUrl.searchParams.set('search_type', 'keyword');
+    reqUrl.searchParams.set('request_type', 'search');
+    reqUrl.searchParams.set('start', '0');
+    reqUrl.searchParams.set('rows', '50');
+    reqUrl.searchParams.set(
+      'fl',
+      'pid,title,description,price,category,price_band,gift_eligible,is_new_arrival,is_bestseller,thumb_image,image_url',
+    );
+
+    if (accountId) reqUrl.searchParams.set('account_id', accountId);
+    if (domainKey) reqUrl.searchParams.set('domain_key', domainKey);
+
+    // BR audience segment signal: embed as query param inside the `url` value.
+    // Boost rules are configured to fire when `url` contains e.g. &gifting_intent=true.
+    // (Confirmed pattern from BR team — replaces the old ref_url approach.)
+    const basePageUrl =
+      typeof window !== 'undefined' ? `${window.location.origin}/` : endpoint;
+    const audienceUrl = `${basePageUrl}?${segment}=true`;
+    reqUrl.searchParams.set('url', audienceUrl);
+
     if (bruid) {
       const value = bruid.includes('=') ? bruid.split('=').slice(1).join('=') : bruid;
-      url.searchParams.set('_br_uid_2', value);
+      reqUrl.searchParams.set('_br_uid_2', value);
     }
 
-    const headers: Record<string, string> = { Accept: 'application/json' };
-    if (bruid) headers['X-BR-UID-2'] = bruid;
+    // eslint-disable-next-line no-console
+    console.group('[ppd:discovery] → REQUEST');
+    // eslint-disable-next-line no-console
+    console.log('URL:', reqUrl.toString());
+    // eslint-disable-next-line no-console
+    console.log('Params:', Object.fromEntries(reqUrl.searchParams));
+    // eslint-disable-next-line no-console
+    console.groupEnd();
 
-    const resp = await fetch(url.toString(), {
+    const resp = await fetch(reqUrl.toString(), {
       method: 'GET',
-      headers,
+      headers: { Accept: 'application/json' },
       signal: controller.signal,
-      credentials: 'include',
     });
 
     if (!resp.ok) throw new Error(`Discovery responded ${resp.status}`);
 
     const body = await resp.json();
-    const products: DiscoveryProduct[] = Array.isArray(body?.products)
-      ? body.products
-      : Array.isArray(body?.response?.docs)
-        ? body.response.docs
+
+    // eslint-disable-next-line no-console
+    console.group('[ppd:discovery] ← RESPONSE');
+    // eslint-disable-next-line no-console
+    console.log('Status:', resp.status);
+    // eslint-disable-next-line no-console
+    console.log('numFound:', body?.response?.numFound ?? body?.total);
+    // eslint-disable-next-line no-console
+    console.log('Raw body:', body);
+    // eslint-disable-next-line no-console
+    console.groupEnd();
+
+    const rawDocs: Record<string, unknown>[] = Array.isArray(body?.response?.docs)
+      ? body.response.docs
+      : Array.isArray(body?.products)
+        ? body.products
         : [];
 
-    if (products.length === 0) throw new Error('Discovery returned empty products');
+    if (rawDocs.length === 0) throw new Error('Discovery returned empty products');
+
+    const products = rawDocs.map((doc) => mapDiscoveryDoc(doc, persona));
 
     return {
       query,
-      total: typeof body?.total === 'number' ? body.total : products.length,
+      total: typeof body?.response?.numFound === 'number'
+        ? body.response.numFound
+        : typeof body?.total === 'number'
+          ? body.total
+          : products.length,
       products,
     };
   } catch (_discoveryErr) {
+    // eslint-disable-next-line no-console
+    console.warn(`[ppd:discovery] discovery-api failed, falling back to loomi-catalog`, _discoveryErr);
     // Discovery unavailable or misconfigured — fall through to Loomi catalog.
   } finally {
     clearTimeout(timer);

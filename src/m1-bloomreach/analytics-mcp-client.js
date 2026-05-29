@@ -50,7 +50,7 @@ async function callLiveABTestCoverage() {
   const normalised_score = Math.min(20, Math.round(raw_value * 20));
   const status = normalised_score <= 8 ? 'critical' : normalised_score <= 14 ? 'warning' : 'healthy';
 
-  return {
+  const result = {
     dimension_id: 'ab_test_coverage',
     raw_value,
     normalised_score,
@@ -58,6 +58,9 @@ async function callLiveABTestCoverage() {
     data_source: 'analytics_mcp',
     timestamp: new Date().toISOString(),
   };
+  // eslint-disable-next-line no-console
+  console.log(`[ppd:analytics-mcp] ← ab_test_coverage running=${running}/${total} raw=${raw_value.toFixed(2)} score=${normalised_score} status=${status}`);
+  return result;
 }
 
 module.exports = {

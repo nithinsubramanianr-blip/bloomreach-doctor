@@ -103,7 +103,7 @@ export default function ApprovalModal({
           <h2
             id="modal-title"
             className="text-lg font-semibold"
-            style={{ color: '#1B3A5C' }}
+            style={{ color: '#2D1BB5' }}
           >
             Review Fix
           </h2>
@@ -132,14 +132,14 @@ export default function ApprovalModal({
             >
               <div
                 className="mb-3 flex h-12 w-12 items-center justify-center rounded-full"
-                style={{ backgroundColor: '#0E7C7B20' }}
+                style={{ backgroundColor: '#7C3AED20' }}
               >
                 <svg
                   width="24"
                   height="24"
                   viewBox="0 0 24 24"
                   fill="none"
-                  stroke="#0E7C7B"
+                  stroke="#7C3AED"
                   strokeWidth="2.5"
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -148,7 +148,7 @@ export default function ApprovalModal({
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
               </div>
-              <p className="text-base font-semibold" style={{ color: '#1B3A5C' }}>
+              <p className="text-base font-semibold" style={{ color: '#2D1BB5' }}>
                 Action logged for review by your team
               </p>
               <p className="mt-1 text-sm text-slate-500">
@@ -163,7 +163,7 @@ export default function ApprovalModal({
                 <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
                   Fix title
                 </p>
-                <p className="mt-0.5 text-base font-semibold" style={{ color: '#1B3A5C' }}>
+                <p className="mt-0.5 text-base font-semibold" style={{ color: '#2D1BB5' }}>
                   {fix.fix_title}
                 </p>
               </div>
@@ -180,7 +180,7 @@ export default function ApprovalModal({
               <div className="grid grid-cols-3 gap-3">
                 <div className="rounded-lg bg-slate-50 p-3 text-center">
                   <p className="text-xs text-slate-400">RPV Lift</p>
-                  <p className="mt-0.5 text-sm font-bold" style={{ color: '#0E7C7B' }}>
+                  <p className="mt-0.5 text-sm font-bold" style={{ color: '#7C3AED' }}>
                     {fix.estimated_rpv_lift_pct_min}–{fix.estimated_rpv_lift_pct_max}%
                   </p>
                 </div>
@@ -241,7 +241,7 @@ export default function ApprovalModal({
                 onClick={handleApprove}
                 data-testid="approve-button"
                 className="rounded-lg px-4 py-2 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-offset-1"
-                style={{ backgroundColor: '#0E7C7B' }}
+                style={{ backgroundColor: '#7C3AED' }}
               >
                 Approve
               </button>
@@ -254,7 +254,7 @@ export default function ApprovalModal({
             <button
               onClick={onDismiss}
               className="rounded-lg px-4 py-2 text-sm font-semibold text-white"
-              style={{ backgroundColor: '#0E7C7B' }}
+              style={{ backgroundColor: '#7C3AED' }}
             >
               Done
             </button>

@@ -12,7 +12,7 @@ export default function DashboardPlaceholder() {
     <div className="min-h-screen bg-slate-50">
       <header
         className="flex h-16 items-center justify-between px-6"
-        style={{ backgroundColor: '#1B3A5C' }}
+        style={{ backgroundColor: '#2D1BB5' }}
       >
         <span className="text-lg font-semibold text-white">
           PPD Dashboard — coming in spec 005

@@ -26,6 +26,12 @@ const {
 const {
   fetchABTestCoverage,
 } = require('../m1-bloomreach/analytics-mcp-client');
+const {
+  fetchSegmentDefinitionQuality,
+  fetchProfileCompleteness,
+  fetchBehavioralSignalRichness,
+} = require('../m1-bloomreach/engagement-client');
+const { askLoomiConversations } = require('./loomi-conversations-client');
 
 /**
  * Claude tool definitions. Input schemas are empty objects because the
@@ -79,6 +85,56 @@ const TOOL_DEFINITIONS = Object.freeze([
       required: [],
     },
   },
+  {
+    name: 'fetchSegmentDefinitionQuality',
+    description: 'Get segment definition quality from Engagement MCP — conditions-per-segment depth weighted by Discovery exposure',
+    input_schema: {
+      type: 'object',
+      properties: {},
+      required: [],
+    },
+  },
+  {
+    name: 'fetchProfileCompleteness',
+    description: 'Get profile completeness from Engagement MCP — share of customers with an enriched identified profile (email populated)',
+    input_schema: {
+      type: 'object',
+      properties: {},
+      required: [],
+    },
+  },
+  {
+    name: 'fetchBehavioralSignalRichness',
+    description: 'Get behavioural signal richness from Engagement MCP — avg distinct event types captured per active user vs target',
+    input_schema: {
+      type: 'object',
+      properties: {},
+      required: [],
+    },
+  },
+  {
+    name: 'askLoomiConversations',
+    description:
+      'Ask the Bloomreach Loomi Conversations Server a catalog-aware shopper question '
+      + '(e.g. "premium necklaces under £100", "gift sets for mothers day"). Returns matching '
+      + 'product or collection items. Use this when the user asks about specific products, '
+      + 'collections, or shopper-facing catalog questions — NOT for diagnostic / PRS questions.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        query: {
+          type: 'string',
+          description: 'Shopper-facing query string',
+        },
+        kind: {
+          type: 'string',
+          enum: ['product', 'collection', 'seeker'],
+          description: 'Optional routing hint. Defaults to product search.',
+        },
+      },
+      required: ['query'],
+    },
+  },
 ]);
 
 /** Map of tool name → underlying M1 fetcher function. */
@@ -88,6 +144,10 @@ const TOOL_IMPLEMENTATIONS = Object.freeze({
   fetchSignalFreshness,
   fetchRuleConflicts,
   fetchABTestCoverage,
+  fetchSegmentDefinitionQuality,
+  fetchProfileCompleteness,
+  fetchBehavioralSignalRichness,
+  askLoomiConversations,
 });
 
 /**
@@ -95,15 +155,8 @@ const TOOL_IMPLEMENTATIONS = Object.freeze({
  * Returned objects are deep-cloned so callers can't mutate the canonical set.
  */
 function getToolDefinitions() {
-  return TOOL_DEFINITIONS.map((tool) => ({
-    name: tool.name,
-    description: tool.description,
-    input_schema: {
-      type: tool.input_schema.type,
-      properties: { ...tool.input_schema.properties },
-      required: [...tool.input_schema.required],
-    },
-  }));
+  // Deep-clone via JSON so nested schema fields (enum, items, etc.) survive.
+  return TOOL_DEFINITIONS.map((tool) => JSON.parse(JSON.stringify(tool)));
 }
 
 /**

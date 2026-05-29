@@ -123,6 +123,10 @@ async function callLiveSearch(query, bruid) {
     );
   }
 
+  const persona = personaSlugFromBruid(bruid);
+  // eslint-disable-next-line no-console
+  console.log(`[ppd:discovery-client] → callLiveSearch q="${query}" persona="${persona}" bruid="${bruid ?? 'none'}"`);
+
   const url = `${base}/api/v2/catalogs/${encodeURIComponent(catalogId)}/items`
     + `?company_id=${encodeURIComponent(projectId)}`
     + `&query=${encodeURIComponent(query)}`
@@ -163,11 +167,10 @@ async function callLiveSearch(query, bruid) {
     image_url: item.properties.image_url || '',
   }));
 
-  const persona = personaSlugFromBruid(bruid);
   const state = demoState();
   const ranked = applyDemoBoost(products, persona, state);
 
-  return {
+  const result = {
     query,
     total: ranked.length,
     products: ranked.map((p, idx) => ({
@@ -178,6 +181,9 @@ async function callLiveSearch(query, bruid) {
     cached: false,
     cache_key: `${persona}-${state}`,
   };
+  // eslint-disable-next-line no-console
+  console.log(`[ppd:discovery-client] ← callLiveSearch ${result.total} products persona="${persona}" state="${state}"`);
+  return result;
 }
 
 // ---------------------------------------------------------------------------
@@ -232,13 +238,16 @@ function buildSyntheticSearchResult(query, bruid) {
     is_personalised: state === 'after' && persona !== 'guest',
   }));
 
-  return {
+  const result = {
     query,
     total: products.length,
     products,
     cached: true,
     cache_key: cacheKey,
   };
+  // eslint-disable-next-line no-console
+  console.log(`[ppd:discovery-client] ← synthetic ${result.total} products cache_key="${cacheKey}"`);
+  return result;
 }
 
 function applyDemoBoost(products, persona, state) {

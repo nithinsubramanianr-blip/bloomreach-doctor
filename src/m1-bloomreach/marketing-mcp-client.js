@@ -81,7 +81,7 @@ async function callLiveAutoSegmentCoverage() {
   const raw_value = total > 0 ? active / total : 0;
   const normalised_score = Math.min(20, Math.round(raw_value * 20));
 
-  return {
+  const result = {
     dimension_id: 'autosegment_coverage',
     raw_value,
     normalised_score,
@@ -89,6 +89,9 @@ async function callLiveAutoSegmentCoverage() {
     data_source: 'marketing_mcp',
     timestamp: new Date().toISOString(),
   };
+  // eslint-disable-next-line no-console
+  console.log(`[ppd:marketing-mcp] ← autosegment_coverage active=${active}/${total} raw=${raw_value.toFixed(2)} score=${normalised_score} status=${result.status}`);
+  return result;
 }
 
 async function callLiveSignalFreshness() {
@@ -105,7 +108,7 @@ async function callLiveSignalFreshness() {
   const raw_value = Math.min(sessionEvents / totalCustomers, 1.0);
   const normalised_score = Math.min(20, Math.round(raw_value * 20));
 
-  return {
+  const result = {
     dimension_id: 'signal_freshness',
     raw_value,
     normalised_score,
@@ -113,6 +116,9 @@ async function callLiveSignalFreshness() {
     data_source: 'marketing_mcp',
     timestamp: new Date().toISOString(),
   };
+  // eslint-disable-next-line no-console
+  console.log(`[ppd:marketing-mcp] ← signal_freshness sessions=${sessionEvents} customers=${totalCustomers} raw=${raw_value.toFixed(2)} score=${normalised_score} status=${result.status}`);
+  return result;
 }
 
 module.exports = {

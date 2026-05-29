@@ -169,6 +169,16 @@ import DashboardApp from '../../src/m4-dashboard/App';
 import ApprovalModal from '../../src/m4-dashboard/components/ApprovalModal';
 import ShopperSimulator from '../../src/m4-dashboard/modules/ShopperSimulator';
 import NLChat from '../../src/m4-dashboard/modules/NLChat';
+import { MemoryRouter } from 'react-router-dom';
+
+// DashboardApp uses <Link>, which requires a Router context in tests.
+function DashboardUnderTest() {
+  return (
+    <MemoryRouter>
+      <DashboardApp />
+    </MemoryRouter>
+  );
+}
 
 // Sample fix for ApprovalModal tests.
 const SAMPLE_FIX = {
@@ -186,46 +196,48 @@ const SAMPLE_FIX = {
 // Test 1: Dashboard renders with navy header and three tab labels
 // --------------------------------------------------------------------------
 
-describe('Test 1 — Dashboard renders navy header and three tabs', () => {
+describe('Test 1 — Dashboard renders Bounteous header and tabs', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  test('renders navy header with correct titles', async () => {
+  test('renders header with Bounteous gradient class and correct titles', async () => {
     await act(async () => {
-      render(<DashboardApp />);
+      render(<DashboardUnderTest />);
     });
 
     const header = screen.getByTestId('dashboard-header');
     expect(header).toBeInTheDocument();
-    // Navy background
-    expect(header).toHaveStyle({ backgroundColor: '#1B3A5C' });
+    // Header now uses the .ppd-header-gradient class (Bounteous primary→accent).
+    expect(header.className).toMatch(/ppd-header-gradient/);
     // Titles
     expect(screen.getByText('Personalization Performance Doctor')).toBeInTheDocument();
-    expect(screen.getByText('Kendra Scott')).toBeInTheDocument();
+    expect(
+      screen.getByText(/Bounteous x Accolite · Powered by Bloomreach/i),
+    ).toBeInTheDocument();
   });
 
-  test('renders three tab labels', async () => {
+  test('renders the visible tab labels', async () => {
     await act(async () => {
-      render(<DashboardApp />);
+      render(<DashboardUnderTest />);
     });
 
+    // Shopper Simulator was removed per product requirements — only Scorecard
+    // and Doctor remain.
     expect(screen.getByTestId('tab-scorecard')).toBeInTheDocument();
-    expect(screen.getByTestId('tab-simulator')).toBeInTheDocument();
     expect(screen.getByTestId('tab-doctor')).toBeInTheDocument();
 
     expect(screen.getByText('PRS Scorecard')).toBeInTheDocument();
-    expect(screen.getByText('Shopper Simulator')).toBeInTheDocument();
     expect(screen.getByText('Ask the Doctor')).toBeInTheDocument();
   });
 
-  test('PRS Scorecard tab is active by default with teal colour', async () => {
+  test('PRS Scorecard tab is active by default with the Bounteous accent', async () => {
     await act(async () => {
-      render(<DashboardApp />);
+      render(<DashboardUnderTest />);
     });
 
     const scorecardTab = screen.getByTestId('tab-scorecard');
-    expect(scorecardTab).toHaveStyle({ color: '#0E7C7B' });
+    expect(scorecardTab).toHaveStyle({ color: '#7C3AED' });
   });
 });
 
@@ -305,7 +317,7 @@ describe('Test 2 — ApprovalModal: Approve updates state, no fetch called', () 
     const fetchSpy = jest.spyOn(global, 'fetch');
 
     await act(async () => {
-      render(<DashboardApp />);
+      render(<DashboardUnderTest />);
     });
 
     // Wait for PRS to load (skeleton disappears).

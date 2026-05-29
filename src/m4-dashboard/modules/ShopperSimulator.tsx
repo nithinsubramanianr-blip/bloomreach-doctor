@@ -84,14 +84,14 @@ function RankBadge({
     <div className="flex items-center gap-1 flex-shrink-0">
       <span
         className="inline-flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold text-white"
-        style={{ backgroundColor: '#1B3A5C' }}
+        style={{ backgroundColor: '#2D1BB5' }}
       >
         {rank}
       </span>
       {isAfter && change && change !== 'same' && (
         <span
           className="text-xs font-bold"
-          style={{ color: change === 'up' ? '#0E7C7B' : '#9CA3AF' }}
+          style={{ color: change === 'up' ? '#7C3AED' : '#9CA3AF' }}
           aria-label={change === 'up' ? 'moved up' : 'moved down'}
         >
           {change === 'up' ? '↑' : '↓'}
@@ -141,7 +141,7 @@ function ProductCard({
         </div>
 
         {/* Price */}
-        <p className="text-sm font-bold" style={{ color: '#1B3A5C' }}>
+        <p className="text-sm font-bold" style={{ color: '#2D1BB5' }}>
           £{product.price.toFixed(2)}
         </p>
 
@@ -149,7 +149,7 @@ function ProductCard({
         {showPersonalisedBadge && (
           <span
             className="self-start rounded-full px-2 py-0.5 text-xs font-semibold text-white mt-0.5"
-            style={{ backgroundColor: '#0E7C7B' }}
+            style={{ backgroundColor: '#7C3AED' }}
           >
             Personalised for you
           </span>
@@ -228,7 +228,7 @@ export default function ShopperSimulator() {
             }`}
             style={
               activePersona === persona.persona_id
-                ? { backgroundColor: '#1B3A5C' }
+                ? { backgroundColor: '#2D1BB5' }
                 : undefined
             }
           >
@@ -279,7 +279,7 @@ export default function ShopperSimulator() {
           <div>
             <p
               className="text-xs font-semibold uppercase tracking-wide"
-              style={{ color: '#0E7C7B' }}
+              style={{ color: '#7C3AED' }}
             >
               After
             </p>

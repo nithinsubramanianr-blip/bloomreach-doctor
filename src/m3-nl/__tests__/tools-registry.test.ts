@@ -1,8 +1,9 @@
 /**
  * Unit tests — tools-registry.
  *
- * Confirms exactly the 5 PRS dimension tools are registered with the
- * names mandated by CLAUDE.md "Module C — True Agentic Tool Selection".
+ * Confirms the PRS dimension tools + Loomi Conversations tool are registered
+ * per CLAUDE.md "Module C — True Agentic Tool Selection" and the 8-dimension
+ * scope expansion (Engagement MCP).
  */
 
 const {
@@ -17,12 +18,16 @@ const EXPECTED_TOOL_NAMES = [
   'fetchSignalFreshness',
   'fetchRuleConflicts',
   'fetchABTestCoverage',
+  'fetchSegmentDefinitionQuality',
+  'fetchProfileCompleteness',
+  'fetchBehavioralSignalRichness',
+  'askLoomiConversations',
 ];
 
 describe('tools-registry', () => {
-  test('getToolDefinitions returns exactly 5 tools', () => {
+  test('getToolDefinitions returns the expected number of tools', () => {
     const defs = getToolDefinitions();
-    expect(defs).toHaveLength(5);
+    expect(defs).toHaveLength(EXPECTED_TOOL_NAMES.length);
   });
 
   test('tools have the exact expected names and order', () => {

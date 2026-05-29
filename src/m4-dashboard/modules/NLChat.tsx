@@ -92,7 +92,7 @@ function ReasoningTracePanel({ trace }: { trace: ReasoningStep[] }) {
         <div className="divide-y divide-slate-100 border-t border-slate-200">
           {trace.map((step, idx) => (
             <div key={idx} className="px-4 py-3 text-xs" data-testid={`trace-step-${idx}`}>
-              <p className="font-mono font-semibold" style={{ color: '#0E7C7B' }}>
+              <p className="font-mono font-semibold" style={{ color: '#7C3AED' }}>
                 {step.tool_name}
               </p>
               <p className="mt-0.5 text-slate-600">{step.tool_output_summary}</p>
@@ -112,7 +112,7 @@ function PlainEnglishAnswer({ response, onCopy }: { response: LLMResponse; onCop
   return (
     <div className="mt-3 rounded-lg border border-slate-200 bg-white p-4" data-testid="plain-english-answer">
       {/* Summary */}
-      <p className="text-sm font-semibold" style={{ color: '#1B3A5C' }}>
+      <p className="text-sm font-semibold" style={{ color: '#2D1BB5' }}>
         {response.summary_sentence}
       </p>
 
@@ -134,7 +134,7 @@ function PlainEnglishAnswer({ response, onCopy }: { response: LLMResponse; onCop
 
       {/* Suggested next action */}
       {response.suggested_next_action && (
-        <p className="mt-3 rounded-lg px-3 py-2 text-sm font-medium" style={{ backgroundColor: '#0E7C7B18', color: '#0E7C7B' }}>
+        <p className="mt-3 rounded-lg px-3 py-2 text-sm font-medium" style={{ backgroundColor: '#7C3AED18', color: '#7C3AED' }}>
           {response.suggested_next_action}
         </p>
       )}
@@ -180,7 +180,7 @@ function ExchangeCard({ exchange, isPreLoaded }: { exchange: AgentResponse; isPr
       <div className="mb-2 flex justify-end">
         <div
           className="max-w-sm rounded-xl px-4 py-2 text-sm font-medium text-white"
-          style={{ backgroundColor: '#1B3A5C' }}
+          style={{ backgroundColor: '#2D1BB5' }}
           data-testid="user-query-bubble"
         >
           {exchange.query}
@@ -301,7 +301,7 @@ export default function NLChat({ prsState }: NLChatProps) {
             className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white p-4"
             data-testid="loading-indicator"
           >
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-teal-600" style={{ borderTopColor: '#0E7C7B' }} />
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-teal-600" style={{ borderTopColor: '#7C3AED' }} />
             <p className="text-sm text-slate-600">Consulting Bloomreach data...</p>
           </div>
         )}
@@ -359,7 +359,7 @@ export default function NLChat({ prsState }: NLChatProps) {
           disabled={isLoading || !inputText.trim()}
           data-testid="ask-button"
           className="rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-offset-1"
-          style={{ backgroundColor: '#0E7C7B' }}
+          style={{ backgroundColor: '#7C3AED' }}
         >
           Ask
         </button>

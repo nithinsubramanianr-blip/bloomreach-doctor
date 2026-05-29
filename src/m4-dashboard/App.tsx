@@ -8,11 +8,11 @@
  * Tabs: PRS Scorecard | Ask the Doctor
  * Shopper Simulator removed per product requirements.
  *
- * Design palette:
- *   Navy  #1B3A5C — header, tab text
- *   Teal  #0E7C7B — active tab, CTAs, Approve button
- *   Amber #F59E0B — warning
- *   White #FFFFFF — card backgrounds
+ * Design palette (Bounteous x Accolite):
+ *   Primary #2D1BB5 — header band gradient anchor
+ *   Accent  #7C3AED — active tab, CTAs, Approve button
+ *   Amber   #F59E0B — warning
+ *   White   #FFFFFF — card backgrounds
  */
 
 import React, { useState, useEffect } from 'react';
@@ -138,29 +138,30 @@ export default function DashboardApp() {
     <div className="min-h-screen bg-slate-50" data-testid="dashboard-app">
       {/* ── Header ── */}
       <header
-        className="px-6 py-4 flex items-center justify-between shadow-md"
-        style={{ backgroundColor: '#1B3A5C' }}
+        className="ppd-header-gradient px-6 py-4 flex items-center justify-between shadow-lg"
         data-testid="dashboard-header"
       >
         <div className="flex items-center gap-3">
           <div
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-lg"
-            style={{ backgroundColor: 'rgba(14,124,123,0.3)' }}
+            className="flex h-10 w-10 items-center justify-center rounded-xl text-lg ring-1 ring-white/30 backdrop-blur"
+            style={{ backgroundColor: 'rgba(255,255,255,0.18)' }}
           >
             🩺
           </div>
           <div>
-            <h1 className="text-base font-bold text-white leading-tight">
+            <h1 className="text-base font-bold text-white leading-tight tracking-tight">
               Personalization Performance Doctor
             </h1>
-            <p className="text-xs text-blue-200">Kendra Scott · Powered by Bloomreach</p>
+            <p className="text-xs text-white/70 tracking-wide">
+              Bounteous x Accolite · Powered by Bloomreach
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-3">
           {approvedActions.length > 0 && (
             <span
               className="rounded-full px-3 py-1 text-xs font-semibold text-white"
-              style={{ backgroundColor: '#0E7C7B' }}
+              style={{ backgroundColor: '#7C3AED' }}
               data-testid="approved-count-badge"
             >
               {approvedActions.length} fix{approvedActions.length !== 1 ? 'es' : ''} queued
@@ -199,7 +200,7 @@ export default function DashboardApp() {
               className={`mr-1 flex items-center gap-1.5 px-4 py-3 text-sm font-semibold transition-colors border-b-2 ${
                 isActive ? 'border-current' : 'border-transparent text-slate-500 hover:text-slate-800'
               }`}
-              style={isActive ? { color: '#0E7C7B', borderColor: '#0E7C7B' } : undefined}
+              style={isActive ? { color: '#7C3AED', borderColor: '#7C3AED' } : undefined}
             >
               <span className="text-base leading-none">{tab.icon}</span>
               {tab.label}
