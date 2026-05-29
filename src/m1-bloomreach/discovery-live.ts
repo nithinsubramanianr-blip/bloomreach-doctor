@@ -24,9 +24,14 @@ import type {
  */
 
 // Public Discovery identifiers (not secrets — they travel in the request URL).
+const DEFAULT_DISCOVERY_ENDPOINT = "https://core.dxpapi.com/api/v1/core/";
+// Use `||` (not `??`) and trim so a SET-BUT-EMPTY env var also falls through to
+// the default. With `??` an empty string would survive and produce a hostless
+// fetch URL ("?account_id=..."), crashing Node's URL parser and silently
+// dropping us into the synthetic fallback.
 const DISCOVERY_ENDPOINT =
-  process.env.NEXT_PUBLIC_DISCOVERY_ENDPOINT ??
-  "https://core.dxpapi.com/api/v1/core/";
+  process.env.NEXT_PUBLIC_DISCOVERY_ENDPOINT?.trim() ||
+  DEFAULT_DISCOVERY_ENDPOINT;
 const ACCOUNT_ID = "7529";
 const DOMAIN_KEY = "pacific_apparel";
 
@@ -71,6 +76,17 @@ const PERSONA_DISCOVERY: Record<
     audienceFlag: "high_value_returning",
   },
 };
+
+// Emit the "live mode ACTIVE" banner once per process, on the first live call,
+// so `npm run dev` shows definitively which mode (and endpoint) is in effect.
+let announced = false;
+function announceLiveModeOnce(): void {
+  if (announced) return;
+  announced = true;
+  console.log(
+    `[m1-bloomreach] live mode ACTIVE → endpoint=${DISCOVERY_ENDPOINT}, account=${ACCOUNT_ID}, domain=${DOMAIN_KEY}`
+  );
+}
 
 /** A request_id in Bloomreach's `br_<digits>` form. */
 function generateRequestId(): string {
@@ -170,6 +186,7 @@ export async function liveSearch(
   state: DemoState,
   bruidOverride: string | null = null
 ): Promise<DiscoverySearchResult> {
+  announceLiveModeOnce();
   const persona = PERSONA_DISCOVERY[personaId];
   const params = new URLSearchParams({
     account_id: ACCOUNT_ID,
@@ -192,11 +209,12 @@ export async function liveSearch(
     params.set("_br_uid_2", bruid);
   }
 
+  const requestUrl = `${DISCOVERY_ENDPOINT}?${params.toString()}`;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   let json: DiscoveryApiResponse;
   try {
-    const res = await fetch(`${DISCOVERY_ENDPOINT}?${params.toString()}`, {
+    const res = await fetch(requestUrl, {
       signal: controller.signal,
       cache: "no-store",
     });
@@ -204,6 +222,15 @@ export async function liveSearch(
       throw new Error(`Discovery responded ${res.status}`);
     }
     json = (await res.json()) as DiscoveryApiResponse;
+  } catch (error) {
+    // A hostless URL (empty endpoint) crashes the URL parser — name the env var
+    // so the cause is obvious instead of a bare "Failed to parse URL".
+    if (error instanceof TypeError && /parse URL/i.test(error.message)) {
+      throw new Error(
+        `Discovery endpoint is invalid ("${DISCOVERY_ENDPOINT}") — check NEXT_PUBLIC_DISCOVERY_ENDPOINT is set to a full URL (e.g. ${DEFAULT_DISCOVERY_ENDPOINT})`
+      );
+    }
+    throw error;
   } finally {
     clearTimeout(timeout);
   }

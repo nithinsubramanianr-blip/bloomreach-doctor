@@ -27,10 +27,20 @@ export const serverEnv = {
   // and an org key (via gateway) both work — just swap the .env values.
   anthropicBaseUrl: () => process.env.ANTHROPIC_BASE_URL ?? "",
   claudeModel: () =>
-    process.env.CLAUDE_MODEL ?? "claude-sonnet-4-20250514",
+    process.env.CLAUDE_MODEL ?? "claude-sonnet-4-6",
 };
 
-/** Public Discovery endpoint (safe to expose to the client). */
+/** Default dxpapi core search endpoint when the env var is missing/empty. */
+export const DEFAULT_DISCOVERY_ENDPOINT = "https://core.dxpapi.com/api/v1/core/";
+
+/**
+ * Public Discovery endpoint (safe to expose to the client). Uses `||` + trim so
+ * a SET-BUT-EMPTY env var falls through to the default instead of returning ""
+ * — an empty endpoint produces a hostless fetch URL that crashes URL parsing.
+ */
 export function discoveryEndpoint(): string {
-  return process.env.NEXT_PUBLIC_DISCOVERY_ENDPOINT ?? "";
+  return (
+    process.env.NEXT_PUBLIC_DISCOVERY_ENDPOINT?.trim() ||
+    DEFAULT_DISCOVERY_ENDPOINT
+  );
 }

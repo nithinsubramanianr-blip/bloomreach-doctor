@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import type {
   DemoState,
@@ -10,6 +10,7 @@ import type {
   PersonaId,
 } from "@/lib/contracts";
 import { BRAND } from "@/lib/brand";
+import { readRulesActiveCookie } from "@/lib/rules-flag";
 import { ProductCard } from "@/components/ProductCard";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { PersonaSwitcher } from "./components/PersonaSwitcher";
@@ -41,10 +42,14 @@ function titleCase(s: string): string {
 export function PLPClient({
   personas,
   initialProducts,
-  rulesActive,
+  rulesActive: initialRulesActive,
 }: PLPClientProps) {
-  // The display state is derived entirely from the flag — never a local toggle.
+  // The flag is seeded from the server prop but tracked locally so an in-app
+  // toggle (no hard refresh) can update it via the cookie — see the focus sync
+  // effect below. The display state is derived entirely from this flag.
+  const [rulesActive, setRulesActive] = useState(initialRulesActive);
   const state: DemoState = rulesActive ? "after" : "before";
+  const initialState: DemoState = initialRulesActive ? "after" : "before";
 
   const [activePersona, setActivePersona] = useState<PersonaId>("guest");
   const [products, setProducts] = useState<DiscoveryProduct[]>(initialProducts);
@@ -59,21 +64,23 @@ export function PLPClient({
     (p) => (category === "all" || p.category === category) && priceTest(p)
   );
 
-  async function loadFor(persona: PersonaId) {
-    // Guest in the current state is exactly the server-rendered initial set.
-    if (persona === "guest") {
+  async function fetchProducts(persona: PersonaId, nextState: DemoState) {
+    // Guest in the server-rendered state is exactly the initial set. Only valid
+    // while the state still matches the server prop — once the cookie flips, the
+    // guest grid must be refetched for the new state like any other persona.
+    if (persona === "guest" && nextState === initialState) {
       setProducts(initialProducts);
       return;
     }
-    const cached = resultCache.get(persona, state);
+    const cached = resultCache.get(persona, nextState);
     if (cached) {
       setProducts(cached.products);
       return;
     }
     setIsLoading(true);
     try {
-      const result = await searchWithTimeout(persona, state);
-      resultCache.set(persona, state, result);
+      const result = await searchWithTimeout(persona, nextState);
+      resultCache.set(persona, nextState, result);
       setProducts(result.products);
     } catch {
       // Never blank the grid — keep whatever is currently shown.
@@ -84,8 +91,24 @@ export function PLPClient({
 
   function handlePersona(persona: PersonaId) {
     setActivePersona(persona);
-    loadFor(persona);
+    void fetchProducts(persona, state);
   }
+
+  // Re-read the rulesActive cookie on mount and whenever the window regains
+  // focus. If the dashboard toggled it (via in-app nav, not a hard reload), pick
+  // up the new state and refetch the active persona — without reloading the page.
+  useEffect(() => {
+    function sync() {
+      const cookieActive = readRulesActiveCookie();
+      if (cookieActive === rulesActive) return;
+      setRulesActive(cookieActive);
+      void fetchProducts(activePersona, cookieActive ? "after" : "before");
+    }
+    sync();
+    window.addEventListener("focus", sync);
+    return () => window.removeEventListener("focus", sync);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activePersona, rulesActive]);
 
   const activePersonaObj = personas.find((p) => p.persona_id === activePersona);
   const banner = rulesActive

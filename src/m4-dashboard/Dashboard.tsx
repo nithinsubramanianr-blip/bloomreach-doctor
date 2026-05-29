@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 
-import type { FixResult, PRSState } from "@/lib/contracts";
+import type { DemoState, FixResult, PRSState } from "@/lib/contracts";
 import { BRAND } from "@/lib/brand";
 import { setRulesActiveCookie } from "@/lib/rules-flag";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -36,9 +36,8 @@ export function Dashboard({ initialPRS }: DashboardProps) {
   const [selectedFix, setSelectedFix] = useState<FixResult | null>(null);
   const [, setApprovedActions] = useState<ApprovedAction[]>([]);
 
-  async function toggleBoostRules() {
-    const state =
-      prsState.boost_rules_state === "all_active" ? "before" : "after";
+  /** Shared score refresh: fetch the PRS for a state and swap it onto the dial. */
+  async function refreshScore(state: DemoState) {
     setIsRefreshing(true);
     try {
       const res = await fetch(`/api/prs?state=${state}`);
@@ -50,6 +49,15 @@ export function Dashboard({ initialPRS }: DashboardProps) {
     } finally {
       setIsRefreshing(false);
     }
+  }
+
+  async function toggleBoostRules() {
+    const nextState: DemoState =
+      prsState.boost_rules_state === "all_active" ? "before" : "after";
+    // Write the cookie BEFORE the fetch resolves so a refresh mid-load already
+    // reflects the new state (the cookie is the PLP's single source of truth).
+    setRulesActiveCookie(nextState === "after");
+    await refreshScore(nextState);
   }
 
   function reviewFix(fix: FixResult) {
@@ -67,8 +75,10 @@ export function Dashboard({ initialPRS }: DashboardProps) {
       },
     ]);
     // Approving a fix activates personalisation: the Live PLP reflects this on
-    // its next load (single source of truth — the rulesActive cookie flag).
+    // its next load (single source of truth — the rulesActive cookie flag)...
     setRulesActiveCookie(true);
+    // ...and the score visibly moves to green on this screen straight away.
+    void refreshScore("after");
   }
 
   return (
