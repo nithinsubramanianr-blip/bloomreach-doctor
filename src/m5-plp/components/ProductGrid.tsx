@@ -23,8 +23,15 @@ function SkeletonCard({ index }: { index: number }) {
     <div
       data-testid="skeleton-card"
       data-index={index}
-      className="h-[280px] animate-pulse rounded-lg bg-slate-200"
-    />
+      className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+    >
+      <div className="aspect-square w-full animate-pulse bg-slate-200" />
+      <div className="space-y-2 px-3.5 py-3">
+        <div className="h-2 w-12 animate-pulse rounded bg-slate-200" />
+        <div className="h-3.5 w-3/4 animate-pulse rounded bg-slate-200" />
+        <div className="h-3 w-1/3 animate-pulse rounded bg-slate-200" />
+      </div>
+    </div>
   );
 }
 

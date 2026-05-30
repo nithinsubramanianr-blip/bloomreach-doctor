@@ -58,3 +58,41 @@ body,
     var(--ppd-accent) 100%
   );
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * Doctor's Report — printable export (FEATURE_DOCTORS_REPORT).
+ *
+ * `.doctors-report` is normally hidden on screen and only appears in print.
+ * When the user clicks Export Report, body gets `.printing-report` which
+ * hides everything else and shows the report at full page width.
+ * ───────────────────────────────────────────────────────────────────────── */
+.doctors-report {
+  display: none;
+}
+
+body.printing-report .doctors-report {
+  display: block;
+}
+
+@media print {
+  /* Only the report should appear on print pages. */
+  body.printing-report > *:not(.doctors-report) {
+    display: none !important;
+  }
+  .doctors-report {
+    display: block !important;
+    background: white !important;
+    color: black !important;
+    padding: 0;
+    margin: 0;
+  }
+  .doctors-report,
+  .doctors-report * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  @page {
+    size: A4;
+    margin: 18mm 14mm;
+  }
+}

@@ -15,11 +15,17 @@ const {
   loadSegmentsFile,
   loadSyntheticDimension,
   isLiveMode,
+  selectedState,
 } = require('./_synthetic-loader');
 const { normaliseDimension } = require('./normaliser');
 const { callMcpToolWithRetry } = require('./mcp-bridge');
 
 const CLIENT_NAME = 'engagement-client';
+
+// Demo overlay constants — 3 new segments, each with the target 3 conditions,
+// all exposed to Discovery. Applied only when selectedState() === 'post_fix'.
+const ADDED_SEGMENTS_AFTER = 3;
+const TARGET_CONDITIONS_PER_SEGMENT = 3;
 
 function statusFromScore(score) {
   if (score <= 8) return 'critical';
@@ -221,23 +227,37 @@ async function callLiveSegmentDefinitionQuality() {
   // a state ("used" if exposed to Discovery integration).
   const payload = await callMcpToolWithRetry('list_segmentations', { project_id: projectId() });
   const all = (payload.data || []).filter((s) => !s.archived);
-  const total = all.length;
+  const liveTotal = all.length;
+
+  let liveConditionSum = 0;
+  let liveExposedCount = 0;
+  for (const seg of all) {
+    liveConditionSum += countConditions(seg);
+    if (isExposedToDiscovery(seg)) liveExposedCount += 1;
+  }
+
+  // AFTER overlay: pretend 3 new well-defined segments were added — each at
+  // the TARGET conditions count, all exposed to Discovery. This raises both
+  // the avg-conditions and exposed-ratio numerators.
+  const state = selectedState();
+  const total = state === 'post_fix' ? liveTotal + ADDED_SEGMENTS_AFTER : liveTotal;
+  const conditionSum = state === 'post_fix'
+    ? liveConditionSum + ADDED_SEGMENTS_AFTER * TARGET_CONDITIONS_PER_SEGMENT
+    : liveConditionSum;
+  const exposedCount = state === 'post_fix'
+    ? liveExposedCount + ADDED_SEGMENTS_AFTER
+    : liveExposedCount;
+
   if (total === 0) {
     return buildDimension('segment_definition_quality', 0, 'engagement_mcp');
   }
 
-  const TARGET_CONDITIONS = 3;
-  let conditionSum = 0;
-  let exposedCount = 0;
-  for (const seg of all) {
-    const conds = countConditions(seg);
-    conditionSum += conds;
-    if (isExposedToDiscovery(seg)) exposedCount += 1;
-  }
   const avgConditions = conditionSum / total;
   const exposedRatio = exposedCount / total;
-  const raw = Math.min(1, (avgConditions / TARGET_CONDITIONS) * exposedRatio);
+  const raw = Math.min(1, (avgConditions / TARGET_CONDITIONS_PER_SEGMENT) * exposedRatio);
 
+  // eslint-disable-next-line no-console
+  console.log(`[ppd:engagement-mcp] ← segment_definition_quality state=${state} live=${liveExposedCount}/${liveTotal} effective=${exposedCount}/${total} raw=${raw.toFixed(2)}`);
   return buildDimension('segment_definition_quality', raw, 'engagement_mcp');
 }
 
@@ -319,10 +339,179 @@ function isExposedToDiscovery(segment) {
   return false;
 }
 
+// ---------------------------------------------------------------------------
+// Persona Provenance (FEATURE_PERSONA_PROVENANCE)
+//
+// Anchors each demo persona (Guest / Sarah / Alex) to a real live customer
+// pulled from the corresponding live segmentation, with a behavioural summary
+// derived from list_customer_events. Powers the "Live customer profile" card
+// in Module B (ShopperSimulator).
+// ---------------------------------------------------------------------------
+
+// Hardcoded mapping from demo persona → live Engagement segmentation ID.
+// IDs are property of the wobbly-donkey sandbox; if the project is migrated,
+// update this map.
+const PERSONA_SEGMENTATION_MAP = Object.freeze({
+  guest: { segmentation_id: '6a19d01e94eee2e514a3ff6a', label: 'New Prospecting' },
+  sarah: { segmentation_id: '6a1996af3054c4016b9623dc', label: 'Gifting Intent' },
+  alex:  { segmentation_id: '6a199ab780eea5f4246f7429', label: 'High Value Returning' },
+});
+
+async function discoverFirstSegmentName(segmentationId) {
+  // get_segmentations → returns full segmentation incl. `segments` array. We
+  // pick the first non-default segment so list_customers_in_segment hits
+  // members (not the "everyone else" bucket).
+  const payload = await callMcpToolWithRetry('get_segmentations', {
+    project_id: projectId(),
+    segmentation_id: segmentationId,
+  });
+  const seg = payload.data || payload || {};
+  const segments = Array.isArray(seg.segments) ? seg.segments : [];
+  // Prefer segments that look named (not "Everyone else" / "default").
+  const named = segments.find((s) => s && s.name && !/everyone|default/i.test(s.name));
+  return (named && named.name) || (segments[0] && segments[0].name) || null;
+}
+
+function pickLastViewedProduct(events) {
+  // Find the most recent view_item event with an inferred product name.
+  for (const ev of events) {
+    if (ev.type !== 'view_item') continue;
+    const props = ev.properties || {};
+    const name = props.item_name || props.product_name || props.name || props.title;
+    if (name) return String(name);
+  }
+  return null;
+}
+
+function aggregateEventCounts(events) {
+  const counts = {};
+  let lastTs = 0;
+  for (const ev of events) {
+    const type = ev.type || 'unknown';
+    counts[type] = (counts[type] || 0) + 1;
+    if (ev.timestamp && ev.timestamp > lastTs) lastTs = ev.timestamp;
+  }
+  return { counts, lastTs };
+}
+
+function maskCustomerId(rawId) {
+  if (!rawId) return null;
+  const s = String(rawId);
+  if (s.length <= 8) return s;
+  return `${s.slice(0, 6)}…${s.slice(-4)}`;
+}
+
+function buildSyntheticProvenance(personaId) {
+  const meta = PERSONA_SEGMENTATION_MAP[personaId] || { label: 'Demo Persona' };
+  // Numbers below mirror the synthetic personas.json shape — kept here so the
+  // card has something to render when live MCP is unavailable.
+  const synthetic = {
+    guest: { customer_id: 'demo-guest-001', total_events: 12, view_item: 8, cart_update: 0, purchase: 0, return: 0, last_active: null, last_viewed_product: null },
+    sarah: { customer_id: 'demo-sarah-002', total_events: 64, view_item: 41, cart_update: 6, purchase: 2, return: 0, last_active: null, last_viewed_product: 'Pavé Drop Necklace' },
+    alex:  { customer_id: 'demo-alex-003',  total_events: 128, view_item: 73, cart_update: 14, purchase: 9, return: 1, last_active: null, last_viewed_product: 'Vermeil Hoop Earrings' },
+  }[personaId] || { customer_id: 'demo-customer', total_events: 0, view_item: 0, cart_update: 0, purchase: 0, return: 0, last_active: null, last_viewed_product: null };
+
+  return {
+    persona_id: personaId,
+    segmentation_id: meta.segmentation_id || null,
+    segment_label: meta.label,
+    customer_id_masked: maskCustomerId(synthetic.customer_id),
+    total_events: synthetic.total_events,
+    event_counts: {
+      view_item: synthetic.view_item,
+      cart_update: synthetic.cart_update,
+      purchase: synthetic.purchase,
+      return: synthetic.return,
+    },
+    last_active_at: synthetic.last_active,
+    last_viewed_product: synthetic.last_viewed_product,
+    is_synthetic: true,
+  };
+}
+
+/**
+ * Public: fetch live persona provenance (real customer + event summary) for
+ * the given demo persona. Returns synthetic fallback shape on any failure
+ * so the UI never crashes.
+ */
+async function fetchPersonaProvenance(personaId) {
+  const meta = PERSONA_SEGMENTATION_MAP[personaId];
+  if (!meta) {
+    return buildSyntheticProvenance(personaId);
+  }
+
+  if (!isLiveMode()) {
+    logFallback('synthetic mode');
+    return buildSyntheticProvenance(personaId);
+  }
+
+  try {
+    // 1) Discover the inner segment name (segmentations are containers).
+    const segmentName = await discoverFirstSegmentName(meta.segmentation_id);
+    if (!segmentName) {
+      throw new Error('no inner segment name found');
+    }
+
+    // 2) Pull one real customer in that segment.
+    const customersPayload = await callMcpToolWithRetry('list_customers_in_segment', {
+      project_id: projectId(),
+      segmentation_id: meta.segmentation_id,
+      segment_name: segmentName,
+      count: 1,
+    });
+    const customers = Array.isArray(customersPayload.data) ? customersPayload.data : [];
+    if (customers.length === 0) {
+      throw new Error(`segment "${segmentName}" has no customers`);
+    }
+    const rawCustomerId = customers[0]._id || customers[0].id || customers[0].customer_id;
+    if (!rawCustomerId) throw new Error('customer missing internal id');
+
+    // 3) Pull recent events for that customer.
+    const eventsPayload = await callMcpToolWithRetry('list_customer_events', {
+      project_id: projectId(),
+      customer_id: rawCustomerId,
+      limit: 100,
+      order_direction: 'desc',
+    });
+    const events = Array.isArray(eventsPayload.data) ? eventsPayload.data : [];
+
+    const { counts, lastTs } = aggregateEventCounts(events);
+    const lastViewedProduct = pickLastViewedProduct(events);
+
+    return {
+      persona_id: personaId,
+      segmentation_id: meta.segmentation_id,
+      segment_label: meta.label,
+      segment_name: segmentName,
+      customer_id_masked: maskCustomerId(rawCustomerId),
+      total_events: events.length,
+      event_counts: {
+        view_item: counts.view_item || 0,
+        cart_update: counts.cart_update || 0,
+        purchase: counts.purchase || 0,
+        return: counts.return || 0,
+        // surface up to 4 more notable types for richer UI later
+        page_visit: counts.page_visit || 0,
+        view_category: counts.view_category || 0,
+        session_start: counts.session_start || 0,
+        campaign: counts.campaign || 0,
+      },
+      last_active_at: lastTs ? new Date(lastTs * 1000).toISOString() : null,
+      last_viewed_product: lastViewedProduct,
+      is_synthetic: false,
+    };
+  } catch (err) {
+    logFallback(err && err.message ? err.message : 'persona-provenance live call failed');
+    return buildSyntheticProvenance(personaId);
+  }
+}
+
 module.exports = {
   fetchPersonaProfiles,
   fetchSegmentStatus,
   fetchSegmentDefinitionQuality,
   fetchProfileCompleteness,
   fetchBehavioralSignalRichness,
+  fetchPersonaProvenance,
+  PERSONA_SEGMENTATION_MAP,
 };

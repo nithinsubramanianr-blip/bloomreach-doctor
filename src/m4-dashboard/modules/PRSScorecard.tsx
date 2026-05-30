@@ -13,6 +13,13 @@
 import React from 'react';
 import ScoreDial from '../components/ScoreDial';
 import type { FixResult } from '../components/ApprovalModal';
+import FoundationGapPanel from '../components/FoundationGapPanel';
+import UntappedSegmentsPanel from '../components/UntappedSegmentsPanel';
+
+const FEATURE_FOUNDATION_GAP =
+  String(process.env.FEATURE_FOUNDATION_GAP || 'false').toLowerCase() === 'true';
+const FEATURE_SEGMENT_OPPORTUNITIES =
+  String(process.env.FEATURE_SEGMENT_OPPORTUNITIES || 'false').toLowerCase() === 'true';
 
 // --------------------------------------------------------------------------
 // Types mirroring M2→M4 PRS State Object contract (CLAUDE.md)
@@ -39,7 +46,13 @@ export interface PRSState {
 export interface PRSScorecardProps {
   prsState: PRSState;
   onReviewFix: (fix: FixResult) => void;
-  onRefreshScore?: () => void;
+  /**
+   * Flips the shared `ppd_rules_active` cookie + re-reads the PRS state.
+   * The PLP page picks up the cookie on its next window focus.
+   */
+  onToggleBoostRules?: () => void;
+  /** Current cookie value — drives the toggle button label/style. */
+  rulesActive?: boolean;
   isRefreshing?: boolean;
 }
 
@@ -252,6 +265,22 @@ function FixCard({ fix, onReview }: { fix: FixResult; onReview: (fix: FixResult)
             </>
           )}
         </div>
+        {fix.featured_products && fix.featured_products.length > 0 && (
+          <div className="mt-2 pt-2 border-t border-slate-100">
+            <p className="text-xs font-semibold text-slate-400 mb-1.5">Loomi AI — products to feature:</p>
+            <div className="flex flex-wrap gap-1.5">
+              {fix.featured_products.slice(0, 3).map((p, i) => (
+                <span
+                  key={i}
+                  className="inline-block rounded-full px-2 py-0.5 text-xs font-medium"
+                  style={{ backgroundColor: '#EDE9FE', color: '#7C3AED', boxShadow: '0 0 0 1px #c4b5fd' }}
+                >
+                  {p}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Review CTA */}
@@ -311,7 +340,8 @@ function ScoreHero({
   formattedDate,
   criticalCount,
   warningCount,
-  onRefresh,
+  onToggleBoostRules,
+  rulesActive,
   isRefreshing,
 }: {
   score: number;
@@ -319,7 +349,8 @@ function ScoreHero({
   formattedDate: string;
   criticalCount: number;
   warningCount: number;
-  onRefresh?: () => void;
+  onToggleBoostRules?: () => void;
+  rulesActive?: boolean;
   isRefreshing?: boolean;
 }) {
   const ragColour = RAG_COLOUR[ragStatus] ?? RAG_COLOUR.amber;
@@ -371,18 +402,32 @@ function ScoreHero({
               </span>
             </div>
 
-            {/* Refresh button */}
-            {onRefresh && (
+            {/* Boost-rules toggle (single source of truth for PLP + Scorecard) */}
+            {onToggleBoostRules && (
               <button
-                onClick={onRefresh}
+                onClick={onToggleBoostRules}
                 disabled={isRefreshing}
-                data-testid="refresh-score-button"
-                className="flex-shrink-0 flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 hover:border-slate-300 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-60 transition-all"
-                style={{ focusRingColor: '#7C3AED' } as React.CSSProperties}
-                aria-label="Refresh score from Bloomreach"
+                data-testid="toggle-boost-rules-button"
+                className={`flex-shrink-0 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-60 transition-all ${
+                  rulesActive
+                    ? 'border border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                    : 'text-white shadow-sm hover:brightness-110'
+                }`}
+                style={
+                  rulesActive
+                    ? ({ focusRingColor: '#7C3AED' } as React.CSSProperties)
+                    : { backgroundColor: '#7C3AED' }
+                }
+                aria-label={rulesActive ? 'Deactivate boost rules' : 'Activate boost rules'}
               >
                 <RefreshIcon spinning={isRefreshing ?? false} />
-                {isRefreshing ? 'Refreshing…' : 'Refresh Score'}
+                {isRefreshing
+                  ? rulesActive
+                    ? 'Deactivating…'
+                    : 'Activating…'
+                  : rulesActive
+                    ? 'Deactivate boost rules'
+                    : 'Activate boost rules'}
               </button>
             )}
           </div>
@@ -412,9 +457,11 @@ function ScoreHero({
             </p>
           </div>
 
-          {/* Hint for refresh flow */}
+          {/* Hint for the boost-rules toggle */}
           <p className="text-xs text-slate-400 leading-relaxed">
-            After making changes in Bloomreach, click <strong>Refresh Score</strong> to pull updated personalisation metrics.
+            {rulesActive
+              ? 'Boost rules active — every persona\'s PLP shows personalised ranking. Click Deactivate to return to the pre-fix state.'
+              : 'Click Activate boost rules to simulate the post-fix state — the PLP will re-rank for each persona via the Discovery audience flag.'}
           </p>
         </div>
       </div>
@@ -429,7 +476,8 @@ function ScoreHero({
 export default function PRSScorecard({
   prsState,
   onReviewFix,
-  onRefreshScore,
+  onToggleBoostRules,
+  rulesActive = false,
   isRefreshing = false,
 }: PRSScorecardProps) {
   if (!prsState) {
@@ -483,7 +531,8 @@ export default function PRSScorecard({
         formattedDate={formattedDate}
         criticalCount={criticalCount}
         warningCount={warningCount}
-        onRefresh={onRefreshScore}
+        onToggleBoostRules={onToggleBoostRules}
+        rulesActive={rulesActive}
         isRefreshing={isRefreshing}
       />
 
@@ -508,6 +557,12 @@ export default function PRSScorecard({
         ))}
       </div>
 
+      {/* ── Section 2.5: Foundation Health (FEATURE_FOUNDATION_GAP) ── */}
+      {FEATURE_FOUNDATION_GAP && <FoundationGapPanel />}
+
+      {/* ── Section 2.6: Untapped Segments (FEATURE_SEGMENT_OPPORTUNITIES) ── */}
+      {FEATURE_SEGMENT_OPPORTUNITIES && <UntappedSegmentsPanel onReviewFix={onReviewFix} />}
+
       {/* ── Section 3: Top Fixes ── */}
       {fix_list && fix_list.length > 0 && (
         <div>
@@ -515,7 +570,7 @@ export default function PRSScorecard({
             <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400">
               Top Fixes
             </h3>
-            <span className="text-xs text-slate-300">Ranked by revenue impact</span>
+            <span className="text-xs text-slate-300">Loomi AI · ranked by revenue impact</span>
           </div>
           <div className="space-y-3">
             {fix_list.map(fix => (

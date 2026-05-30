@@ -25,14 +25,23 @@ export interface DiscoveryProduct {
   product_id: string;
   name: string;
   description?: string;
+  /** Effective price (sale_price if discounted, else list price). */
   price: number;
+  /** Raw list price — populated only when the doc included `price`. */
+  list_price?: number;
+  /** Discounted price when applicable; `undefined` if no sale. */
+  sale_price?: number;
   currency: string;
+  brand?: string;
   category?: string;
   price_band?: 'entry' | 'premium' | string;
   gift_eligible?: boolean;
   is_new_arrival?: boolean;
   is_bestseller?: boolean;
   image_url?: string;
+  /** Discovery `url` field — link to the live PDP. */
+  product_url?: string;
+  rank_position?: number;
   is_personalised?: boolean;
 }
 

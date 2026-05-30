@@ -11,11 +11,16 @@
 
 'use strict';
 
-const { loadSyntheticDimension, isLiveMode } = require('./_synthetic-loader');
+const { loadSyntheticDimension, isLiveMode, selectedState } = require('./_synthetic-loader');
 const { normaliseDimension } = require('./normaliser');
 const { callMcpToolWithRetry } = require('./mcp-bridge');
 
 const CLIENT_NAME = 'marketing-mcp-client';
+
+// Demo narrative: activating boost rules adds 3 manual segments to Engagement
+// (one per persona) and configures 3 A/B tests for those rules. These constants
+// are surfaced in the AFTER overlay so the score actually lifts on toggle.
+const ADDED_SEGMENTS_AFTER = 3;
 
 function logFallback(reason) {
   const suffix = reason ? ` (${reason})` : '';
@@ -75,8 +80,15 @@ async function callLiveAutoSegmentCoverage() {
   }
 
   const all = (payload.data || []).filter((s) => !s.archived);
-  const active = all.filter((s) => s.status === 'active' || s.is_active === true).length;
-  const total = all.length;
+  const liveActive = all.filter((s) => s.status === 'active' || s.is_active === true).length;
+  const liveTotal = all.length;
+
+  // AFTER overlay: pretend the 3 demo segments (Gifting / High Value / New
+  // Prospecting) were created and linked to active boost rules. This is the
+  // demo narrative — toggle reflects "what if we added 3 segments now?".
+  const state = selectedState();
+  const active = state === 'post_fix' ? liveActive + ADDED_SEGMENTS_AFTER : liveActive;
+  const total = state === 'post_fix' ? liveTotal + ADDED_SEGMENTS_AFTER : liveTotal;
 
   const raw_value = total > 0 ? active / total : 0;
   const normalised_score = Math.min(20, Math.round(raw_value * 20));
@@ -90,7 +102,7 @@ async function callLiveAutoSegmentCoverage() {
     timestamp: new Date().toISOString(),
   };
   // eslint-disable-next-line no-console
-  console.log(`[ppd:marketing-mcp] ← autosegment_coverage active=${active}/${total} raw=${raw_value.toFixed(2)} score=${normalised_score} status=${result.status}`);
+  console.log(`[ppd:marketing-mcp] ← autosegment_coverage state=${state} live=${liveActive}/${liveTotal} effective=${active}/${total} raw=${raw_value.toFixed(2)} score=${normalised_score} status=${result.status}`);
   return result;
 }
 

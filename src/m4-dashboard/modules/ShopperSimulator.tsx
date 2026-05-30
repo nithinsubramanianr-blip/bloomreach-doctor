@@ -16,6 +16,10 @@
 import React, { useState, useEffect } from 'react';
 import resultCache from '../../m5-plp/lib/resultCache';
 import type { DiscoveryProduct } from '../../m5-plp/lib/resultCache';
+import PersonaProvenanceCard from '../components/PersonaProvenanceCard';
+
+const FEATURE_PERSONA_PROVENANCE =
+  String(process.env.FEATURE_PERSONA_PROVENANCE || 'false').toLowerCase() === 'true';
 
 export type PersonaId = 'guest' | 'sarah' | 'alex';
 export type DisplayState = 'before' | 'after';
@@ -241,6 +245,9 @@ export default function ShopperSimulator() {
       <p className="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800 border border-amber-200">
         {BANNER_TEXT}
       </p>
+
+      {/* ── Persona Provenance card (FEATURE_PERSONA_PROVENANCE) ── */}
+      {FEATURE_PERSONA_PROVENANCE && <PersonaProvenanceCard personaId={activePersona} />}
 
       {/* ── Side-by-side comparison ── */}
       <div className="grid grid-cols-[1fr_1px_1fr] gap-0" data-testid="comparison-layout">

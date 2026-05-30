@@ -84,8 +84,16 @@ async function fetchAllDimensions() {
   return _inflight;
 }
 
+/**
+ * Force a clean slate before the next fetchAllDimensions call. Useful when
+ * runtime state changes (e.g. toggling boost rules) and we must not return
+ * the previous state's in-flight promise.
+ */
+function resetInflight() { _inflight = null; }
+
 module.exports = {
   fetchAllDimensions,
+  resetInflight,
   // Exposed for tests — lets a suite reset the dedup state.
-  _resetInflightForTests() { _inflight = null; },
+  _resetInflightForTests: resetInflight,
 };

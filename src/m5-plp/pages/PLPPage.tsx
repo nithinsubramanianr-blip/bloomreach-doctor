@@ -8,23 +8,22 @@ import PersonaSwitcher, {
 import ProductGrid from '../components/ProductGrid';
 import resultCache, {
   type DiscoveryProduct,
+  type DisplayState,
   type PersonaId,
 } from '../lib/resultCache';
 import { search as discoverySearch } from '../lib/discoveryClient';
+import { readRulesActiveCookie } from '../../lib/rules-flag';
 
 /**
  * PLPPage — route "/"
  *
- * Always displays live/personalised results — no Before/After toggle.
- * Fetch chain (never empty grid):
- *   1) Always forces a fresh Discovery call (clears cache on mount/persona switch)
- *   2) discoveryClient.search with 3s timeout → store in cache + return
- *   3) timeout / error → resultCache.loadFromFile('after') as fallback
+ * Personalisation state is driven by the `ppd_rules_active` cookie.
+ *   false → Discovery search with NO audience flag → same generic ranking for all personas
+ *   true  → Discovery search WITH audience flag per persona → personalised ranking
  *
- * Refresh button: clears cache entry and re-triggers fetch.
+ * Search is fully user-driven: the search box controls the query sent to
+ * Discovery. Boost rules do not change the query, only the audience context.
  */
-
-const DEMO_QUERY = 'necklace';
 
 const rawPersonas: PersonaOption[] = (personasJson as any).personas.map(
   (p: any) => ({
@@ -48,29 +47,33 @@ function getBruidCookie(): string | null {
 
 async function fetchProductsLive(
   personaId: PersonaId | string,
+  state: DisplayState,
+  query: string,
 ): Promise<DiscoveryProduct[]> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 3000);
+  const timer = setTimeout(() => controller.abort(), 4000);
   try {
     const live = await discoverySearch(
-      DEMO_QUERY,
+      query,
       getBruidCookie(),
       controller.signal,
+      4000,
+      state,
     );
     clearTimeout(timer);
     if (live.products && live.products.length > 0) {
-      resultCache.set(personaId, 'after', {
+      resultCache.set(personaId, state, {
         products: live.products,
         cached_at: Date.now(),
       });
       return live.products;
     }
     throw new Error('Empty live result');
-  } catch(err) {
+  } catch (err) {
     console.warn('Live fetch failed, falling back to cache file', err);
     clearTimeout(timer);
-    const file = resultCache.loadFromFile(personaId, 'after');
-    resultCache.set(personaId, 'after', file);
+    const file = resultCache.loadFromFile(personaId, state);
+    resultCache.set(personaId, state, file);
     return file.products;
   }
 }
@@ -80,43 +83,66 @@ export default function PLPPage() {
   const [products, setProducts] = useState<DiscoveryProduct[] | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastFetchedAt, setLastFetchedAt] = useState<Date | null>(null);
+  // Search query — what Discovery actually receives
+  const [searchQuery, setSearchQuery] = useState('necklace');
+  // Pending input — what the user is typing in the search box
+  const [pendingInput, setPendingInput] = useState('necklace');
+  // Personalisation flag — seeded from the cookie, refreshed on window focus
+  const [rulesActive, setRulesActive] = useState<boolean>(() => readRulesActiveCookie());
+  const displayState: DisplayState = rulesActive ? 'after' : 'before';
 
-  const loadProducts = useCallback(async (personaId: string, force = false) => {
-    if (force) {
-      resultCache.set(personaId, 'after', {
-        products: [],
-        cached_at: 0,
-      });
-    }
-    setProducts(null);
-    const result = await fetchProductsLive(personaId);
-    setProducts(result);
-    setLastFetchedAt(new Date());
-  }, []);
+  const loadProducts = useCallback(
+    async (personaId: string, state: DisplayState, query: string, force = false) => {
+      if (force) {
+        resultCache.set(personaId, state, { products: [], cached_at: 0 });
+      }
+      setProducts(null);
+      const result = await fetchProductsLive(personaId, state, query);
+      setProducts(result);
+      setLastFetchedAt(new Date());
+    },
+    [],
+  );
 
-  // Single effect: applies the persona cookie + loads products whenever the
-  // active persona changes (including initial mount). The discoveryClient
-  // dedupes in-flight calls so React 18 StrictMode's double-invoke still
-  // results in only one network round-trip per persona.
+  // Persona, state, or query change → re-fetch.
   useEffect(() => {
     const persona = rawPersonas.find((p) => p.persona_id === activePersonaId);
     if (persona) applyPersonaCookie(persona);
 
     let cancelled = false;
     setProducts(null);
-    fetchProductsLive(activePersonaId).then((p) => {
+    fetchProductsLive(activePersonaId, displayState, searchQuery).then((p) => {
       if (!cancelled) {
         setProducts(p);
         setLastFetchedAt(new Date());
       }
     });
     return () => { cancelled = true; };
-  }, [activePersonaId]);
+  }, [activePersonaId, displayState, searchQuery]);
+
+  // Pick up cookie flips made from the dashboard "Activate boost rules" button.
+  useEffect(() => {
+    function sync() {
+      const next = readRulesActiveCookie();
+      setRulesActive((prev) => (prev === next ? prev : next));
+    }
+    sync();
+    window.addEventListener('focus', sync);
+    return () => window.removeEventListener('focus', sync);
+  }, []);
+
+  function handleSearch(e: React.FormEvent) {
+    e.preventDefault();
+    const trimmed = pendingInput.trim();
+    if (trimmed && trimmed !== searchQuery) {
+      setSearchQuery(trimmed);
+    }
+  }
 
   async function handleRefresh() {
     setIsRefreshing(true);
     try {
-      await loadProducts(activePersonaId, true);
+      await loadProducts(activePersonaId, displayState, searchQuery, true);
     } finally {
       setIsRefreshing(false);
     }
@@ -163,22 +189,55 @@ export default function PLPPage() {
       </header>
 
       <main className="mx-auto max-w-7xl px-6 py-6">
+
+        {/* ── Search form ── */}
+        <form onSubmit={handleSearch} className="mb-5 flex gap-3" data-testid="search-form">
+          <div className="relative flex-1">
+            <div className="pointer-events-none absolute inset-y-0 left-3.5 flex items-center">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400" aria-hidden="true">
+                <circle cx="11" cy="11" r="8"/>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+            </div>
+            <input
+              type="text"
+              value={pendingInput}
+              onChange={e => setPendingInput(e.target.value)}
+              placeholder="Search products…"
+              data-testid="search-input"
+              className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={!pendingInput.trim()}
+            data-testid="search-button"
+            className="rounded-xl px-6 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:opacity-90 disabled:opacity-50"
+            style={{ backgroundColor: '#2D1BB5' }}
+          >
+            Search
+          </button>
+        </form>
+
         {/* ── Page header row ── */}
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
             <h1 className="text-xl font-bold text-slate-800">
-              Search results for "{DEMO_QUERY}"
+              Search results for &ldquo;{searchQuery}&rdquo;
             </h1>
             <div className="mt-1.5 flex items-center gap-2">
               <span
                 className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold text-white"
-                style={{ backgroundColor: '#7C3AED' }}
+                style={{ backgroundColor: rulesActive ? '#7C3AED' : '#64748B' }}
+                data-testid="plp-personalisation-pill"
               >
                 <span
-                  className="h-1.5 w-1.5 rounded-full bg-white/80 animate-pulse"
+                  className={`h-1.5 w-1.5 rounded-full bg-white/80 ${rulesActive ? 'animate-pulse' : ''}`}
                   aria-hidden="true"
                 />
-                Live · Personalised results
+                {rulesActive
+                  ? 'Personalisation active'
+                  : 'Personalisation inactive · same ranking for all personas'}
               </span>
               {formattedTime && (
                 <span className="text-xs text-slate-400">
@@ -216,7 +275,7 @@ export default function PLPPage() {
           </button>
         </div>
 
-        <ProductGrid products={products} displayState="after" />
+        <ProductGrid products={products} displayState={displayState} />
       </main>
     </div>
   );

@@ -5,8 +5,10 @@
  * Owns all top-level state: active tab, PRS data, modal open/close,
  * approved actions list (local only — Invariant #8, no API write).
  *
+ * Session persistence: `exchanges` (chat history) and `dynamicChips` live
+ * here so they survive tab switches without re-mounting NLChat.
+ *
  * Tabs: PRS Scorecard | Ask the Doctor
- * Shopper Simulator removed per product requirements.
  *
  * Design palette (Bounteous x Accolite):
  *   Primary #2D1BB5 — header band gradient anchor
@@ -17,10 +19,18 @@
 
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import PRSScorecard, { type PRSState } from './modules/PRSScorecard';
-import NLChat from './modules/NLChat';
+import PRSScorecard, { type PRSState, type DimensionResult } from './modules/PRSScorecard';
+import NLChat, { type AgentResponse } from './modules/NLChat';
 import ApprovalModal from './components/ApprovalModal';
 import type { FixResult } from './components/ApprovalModal';
+import DoctorsReport from './components/DoctorsReport';
+
+const FEATURE_DOCTORS_REPORT =
+  String(process.env.FEATURE_DOCTORS_REPORT || 'false').toLowerCase() === 'true';
+import {
+  readRulesActiveCookie,
+  setRulesActiveCookie,
+} from '../lib/rules-flag';
 
 // --------------------------------------------------------------------------
 // Types
@@ -48,21 +58,18 @@ const TABS: { id: ActiveTab; label: string; icon: string }[] = [
 // --------------------------------------------------------------------------
 
 // CJS modules imported as ESM default — Vite/esbuild synthesises named exports.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import prsFetcherModule from '../m1-bloomreach/prs-data-fetcher.js';
 import syntheticLoaderModule from '../m1-bloomreach/_synthetic-loader.js';
-/* eslint-disable @typescript-eslint/no-explicit-any */
-const { setRuntimeState } = syntheticLoaderModule as any;
-/* eslint-enable @typescript-eslint/no-explicit-any */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 import prsCalculatorModule from '../m2-scoring/prs-calculator.js';
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 import fixGeneratorModule from '../m2-scoring/fix-generator.js';
+import loomiConversationsModule from '../m3-nl/loomi-conversations-client.js';
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-const { fetchAllDimensions } = prsFetcherModule as any;
-const { calculatePRS }       = prsCalculatorModule as any;
-const { generateFixList }    = fixGeneratorModule as any;
+const { setRuntimeState } = syntheticLoaderModule as any;
+const { fetchAllDimensions, resetInflight: resetFetcherInflight } = prsFetcherModule as any;
+const { calculatePRS }    = prsCalculatorModule as any;
+const { generateFixList } = fixGeneratorModule as any;
+const { askLoomiConversations } = loomiConversationsModule as any;
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
 async function loadPRSState(): Promise<PRSState> {
@@ -70,6 +77,83 @@ async function loadPRSState(): Promise<PRSState> {
   const prs = calculatePRS(dimensions) as PRSState;
   const fixList = generateFixList(prs) as FixResult[];
   return { ...prs, fix_list: fixList };
+}
+
+// --------------------------------------------------------------------------
+// Dynamic chips — generated from live PRS critical/warning dimensions
+// --------------------------------------------------------------------------
+
+const DEFAULT_CHIPS: readonly string[] = [
+  'Why is my personalisation not working?',
+  'What should I fix first?',
+  'Show me what good personalisation looks like for my top 3 customer types',
+];
+
+const DIM_CHIP: Record<string, (dim: DimensionResult) => string> = {
+  bruid_match_rate:           (d) => `Why is visitor recognition at only ${Math.round((d.raw_value ?? 0) * 100)}%?`,
+  autosegment_coverage:       (d) => `How do I improve segment coverage from ${Math.round((d.raw_value ?? 0) * 100)}%?`,
+  ab_test_coverage:           (d) => `How can I grow A/B test coverage beyond ${Math.round((d.raw_value ?? 0) * 100)}%?`,
+  signal_freshness:           ()  => 'Why are my behavioural signals stale?',
+  segment_definition_quality: ()  => 'How can I improve segment definition quality?',
+  profile_completeness:       ()  => 'What is causing low customer profile completeness?',
+  behavioral_signal_richness: ()  => 'How do I capture richer behavioural signals?',
+  rule_conflicts:             ()  => 'Are there conflicts in my boost rules?',
+};
+
+function generateChipsFromPRS(prsState: PRSState): string[] {
+  const critical = prsState.dimensions
+    .filter(d => d.status === 'critical' || d.status === 'warning')
+    .sort((a, b) => (a.normalised_score ?? a.score) - (b.normalised_score ?? b.score));
+
+  const chips: string[] = [];
+  for (const dim of critical) {
+    const fn = DIM_CHIP[dim.dimension_id];
+    if (fn && chips.length < 2) chips.push(fn(dim));
+  }
+  chips.push(`How do I get my score from ${prsState.composite_score} to 75+?`);
+  return chips.slice(0, 3);
+}
+
+// --------------------------------------------------------------------------
+// Loomi fix enrichment — attaches product suggestions from Conversations API
+// --------------------------------------------------------------------------
+
+const DIM_LOOMI_QUERY: Record<string, string> = {
+  autosegment_coverage:       'bestselling jeans for gift buyers',
+  bruid_match_rate:           'trending fashion items for new visitors',
+  ab_test_coverage:           'featured clothing collections to test',
+  signal_freshness:           'new arrival tops and shirts',
+  segment_definition_quality: 'gift ready premium clothing',
+  profile_completeness:       'personalised clothing recommendations',
+  behavioral_signal_richness: 'top rated fashion styles',
+  rule_conflicts:             'sale items to promote',
+};
+
+async function enrichFixListWithLoomi(fixes: FixResult[], prsState: PRSState): Promise<FixResult[]> {
+  try {
+    const worst = [...prsState.dimensions]
+      .filter(d => d.status === 'critical' || d.status === 'warning')
+      .sort((a, b) => (a.normalised_score ?? a.score) - (b.normalised_score ?? b.score))[0];
+
+    if (!worst) return fixes;
+
+    const query = DIM_LOOMI_QUERY[worst.dimension_id] ?? 'top recommended products';
+    /* eslint-disable @typescript-eslint/no-explicit-any */
+    const result = await askLoomiConversations({ query, kind: 'seeker' }) as any;
+    /* eslint-enable @typescript-eslint/no-explicit-any */
+
+    const items: any[] = Array.isArray(result?.data) ? result.data : [];
+    if (items.length === 0) return fixes;
+
+    const products = items.slice(0, 3).map((p: any) => p.title || p.name || p.product_id || 'Product');
+
+    return fixes.map((fix, idx) =>
+      idx === 0 ? { ...fix, featured_products: products } : fix,
+    );
+  } catch (err) {
+    console.warn('[PPD] Loomi fix enrichment failed — using unenriched fixes:', err);
+    return fixes;
+  }
 }
 
 // --------------------------------------------------------------------------
@@ -83,27 +167,47 @@ export default function DashboardApp() {
   const [selectedFix, setSelectedFix] = useState<FixResult | null>(null);
   const [approvedActions, setApprovedActions] = useState<ApprovedAction[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  // Shared rules-active flag — single source of truth across PLP + Dashboard.
+  const [rulesActive, setRulesActive] = useState<boolean>(() => readRulesActiveCookie());
 
-  // Load PRS data on mount.
+  // Chat session persistence — lifted here so NLChat survives tab switches.
+  const [exchanges, setExchanges] = useState<AgentResponse[]>([]);
+  // Dynamic chips generated from the live PRS state.
+  const [dynamicChips, setDynamicChips] = useState<readonly string[]>(DEFAULT_CHIPS);
+
   useEffect(() => {
+    setRuntimeState(rulesActive ? 'post_fix' : 'pre_fix');
     loadPRSState()
-      .then(state => setPrsState(state))
-      .catch(err => {
+      .then((state) => {
+        setPrsState(state);
+        setDynamicChips(generateChipsFromPRS(state));
+        // Enrich in background — doesn't block the initial render.
+        enrichFixListWithLoomi(state.fix_list, state).then(enrichedFixes => {
+          setPrsState(current => current ? { ...current, fix_list: enrichedFixes } : current);
+        });
+      })
+      .catch((err) => {
         // eslint-disable-next-line no-console
         console.error('[M4] PRS load error:', err);
       });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ---------- Refresh handler ----------
-  // Called when user returns from Bloomreach after activating boost rules.
-  // setRuntimeState('post_fix') simulates the system detecting active rules
-  // via Discovery API (in synthetic mode this switches to the post-fix data).
-  async function handleRefreshScore() {
+  // ---------- Boost-rules toggle ----------
+  async function handleToggleBoostRules() {
     setIsRefreshing(true);
-    setRuntimeState('post_fix');
+    const next = !rulesActive;
+    setRulesActive(next);
+    setRulesActiveCookie(next);
+    setRuntimeState(next ? 'post_fix' : 'pre_fix');
+    resetFetcherInflight?.();
     try {
       const state = await loadPRSState();
       setPrsState(state);
+      setDynamicChips(generateChipsFromPRS(state));
+      enrichFixListWithLoomi(state.fix_list, state).then(enrichedFixes => {
+        setPrsState(current => current ? { ...current, fix_list: enrichedFixes } : current);
+      });
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('[M4] PRS refresh error:', err);
@@ -132,6 +236,25 @@ export default function DashboardApp() {
   function handleCloseModal() {
     setIsModalOpen(false);
     setSelectedFix(null);
+  }
+
+  // ---------- Doctor's Report export (FEATURE_DOCTORS_REPORT) ----------
+  function handleExportReport() {
+    if (!prsState) return;
+    // Add a class to <body> that flips the print stylesheet — the report
+    // becomes the only visible element; window.print() then opens the dialog.
+    document.body.classList.add('printing-report');
+
+    const cleanup = () => {
+      document.body.classList.remove('printing-report');
+      window.removeEventListener('afterprint', cleanup);
+    };
+    window.addEventListener('afterprint', cleanup);
+
+    // Give the browser one paint frame to apply the class before printing.
+    requestAnimationFrame(() => {
+      window.print();
+    });
   }
 
   return (
@@ -166,6 +289,22 @@ export default function DashboardApp() {
             >
               {approvedActions.length} fix{approvedActions.length !== 1 ? 'es' : ''} queued
             </span>
+          )}
+          {FEATURE_DOCTORS_REPORT && (
+            <button
+              onClick={handleExportReport}
+              disabled={!prsState}
+              data-testid="export-report-button"
+              className="flex items-center gap-1.5 rounded-lg border border-white/20 px-3 py-1.5 text-xs font-semibold text-white/80 hover:border-white/40 hover:text-white hover:bg-white/10 transition-colors disabled:opacity-50"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="12" y1="18" x2="12" y2="12"/>
+                <polyline points="9 15 12 12 15 15"/>
+              </svg>
+              Export Report
+            </button>
           )}
           <Link
             to="/"
@@ -216,7 +355,8 @@ export default function DashboardApp() {
             <PRSScorecard
               prsState={prsState as PRSState}
               onReviewFix={handleReviewFix}
-              onRefreshScore={handleRefreshScore}
+              onToggleBoostRules={handleToggleBoostRules}
+              rulesActive={rulesActive}
               isRefreshing={isRefreshing}
             />
           </div>
@@ -224,7 +364,12 @@ export default function DashboardApp() {
 
         {activeTab === 'doctor' && (
           <div role="tabpanel" data-testid="panel-doctor">
-            <NLChat prsState={prsState} />
+            <NLChat
+              prsState={prsState}
+              exchanges={exchanges}
+              onExchangesChange={setExchanges}
+              dynamicChips={dynamicChips}
+            />
           </div>
         )}
       </main>
@@ -237,6 +382,11 @@ export default function DashboardApp() {
         onReviewLater={handleCloseModal}
         onDismiss={handleCloseModal}
       />
+
+      {/* ── Printable Doctor's Report (hidden on screen, shown on print) ── */}
+      {FEATURE_DOCTORS_REPORT && (
+        <DoctorsReport prsState={prsState} approvedActions={approvedActions} />
+      )}
     </div>
   );
 }

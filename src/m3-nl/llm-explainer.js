@@ -1,16 +1,18 @@
 /**
- * M3 NL Interface — Loomi-only explainer.
+ * M3 NL Interface — Hybrid explainer.
  *
- * REPLACES the previous Anthropic SDK orchestration. The Ask the Doctor chat
- * now runs entirely against:
- *   1) the live PRS state (already harvested via M1 MCP fetchers)
- *   2) the Bloomreach Loomi Conversations Server for catalog questions
+ * Two execution paths gated by FEATURE_NATIVE_CLAUDE_TOOLS:
  *
- * No Anthropic SDK calls. The reasoning trace surfaces the actual MCP calls
- * we make (currently the Loomi Conversations Server when the query mentions
- * products / catalog terms).
+ *   TRUE  → Native Claude tool use (Invariant #6). Calls Anthropic Messages
+ *           API via the Vite /anthropic-api proxy with tool_choice:auto.
+ *           Claude selects which of the 9 registered M1/M3 tools to call;
+ *           reasoning trace surfaces real tool_use/tool_result blocks.
  *
- * Contract preserved:
+ *   FALSE → Loomi-only fallback. Reads the pre-harvested PRS snapshot and
+ *           optionally calls the Loomi Conversations Server for catalog
+ *           questions. No Anthropic API calls. (Original behaviour.)
+ *
+ * Contract preserved across both paths:
  *   {
  *     llm_response: { summary_sentence, score_breakdown, top_3_fixes,
  *                     suggested_next_action },
@@ -22,6 +24,7 @@
 'use strict';
 
 const { askLoomiConversations } = require('./loomi-conversations-client');
+const { getToolDefinitions, getToolImplementation } = require('./tools-registry');
 
 const TRACE_SUMMARY_MAX = 200;
 
@@ -241,14 +244,202 @@ function buildPRSReasoningTrace(prs) {
   }));
 }
 
+// ---------------------------------------------------------------------------
+// Native Claude tool-use path (FEATURE_NATIVE_CLAUDE_TOOLS=true)
+// ---------------------------------------------------------------------------
+
+const ANTHROPIC_ENDPOINT = '/anthropic-api/v1/messages';
+const ANTHROPIC_MAX_TOKENS = 1500;
+const TOOL_LOOP_MAX_ITERATIONS = 5;
+
+function isNativeClaudeEnabled() {
+  return String(process.env.FEATURE_NATIVE_CLAUDE_TOOLS || 'false').toLowerCase() === 'true';
+}
+
+function getClaudeModel() {
+  return process.env.CLAUDE_MODEL || 'claude-sonnet-4-20250514';
+}
+
+const SYSTEM_PROMPT = `You are the Personalization Performance Doctor — a diagnostic agent for Bloomreach Discovery personalization health. You help Amanda Valdez (Digital Personalization Manager at Kendra Scott) understand why personalization is or isn't working.
+
+You have access to 9 tools that fetch live data from Bloomreach Discovery, Engagement (via Loomi MCP), and Analytics. Call whichever tools you need to answer the user's question. Prefer fewer, targeted calls.
+
+After gathering data, respond with ONLY a single JSON object on the final assistant turn, matching this exact shape:
+{
+  "summary_sentence": "one-sentence headline of the answer",
+  "score_breakdown": "2-3 sentence explanation of the relevant scores / data points",
+  "top_3_fixes": ["actionable fix 1", "actionable fix 2", "actionable fix 3"],
+  "suggested_next_action": "the single next step Amanda should take"
+}
+
+No markdown, no preamble, no trailing text — just the JSON object. Currency is GBP. Be concrete and reference actual numbers from tool results.`;
+
+function summariseToolOutput(value, max = TRACE_SUMMARY_MAX) {
+  if (value == null) return '';
+  try {
+    if (typeof value === 'object') {
+      const flat = {
+        raw_value: value.raw_value,
+        normalised_score: value.normalised_score,
+        status: value.status,
+        data_source: value.data_source,
+      };
+      const hasAny = Object.values(flat).some((v) => v !== undefined);
+      const text = JSON.stringify(hasAny ? flat : value);
+      return text.length > max ? text.slice(0, max - 1) + '…' : text;
+    }
+    const text = String(value);
+    return text.length > max ? text.slice(0, max - 1) + '…' : text;
+  } catch (_err) {
+    return String(value).slice(0, max);
+  }
+}
+
+async function callAnthropic(messages, tools) {
+  const body = {
+    model: getClaudeModel(),
+    max_tokens: ANTHROPIC_MAX_TOKENS,
+    system: SYSTEM_PROMPT,
+    tools,
+    tool_choice: { type: 'auto' },
+    messages,
+  };
+
+  const res = await fetch(ANTHROPIC_ENDPOINT, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    throw new Error(`Anthropic API ${res.status}: ${errText.slice(0, 200)}`);
+  }
+  return res.json();
+}
+
+function extractJSONFromText(text) {
+  if (!text) return null;
+  // Try the whole string first; otherwise look for the first {...} block.
+  try { return JSON.parse(text); } catch (_e) { /* fall through */ }
+  const start = text.indexOf('{');
+  const end = text.lastIndexOf('}');
+  if (start !== -1 && end > start) {
+    try { return JSON.parse(text.slice(start, end + 1)); } catch (_e) { /* noop */ }
+  }
+  return null;
+}
+
+async function explainWithNativeClaude(context) {
+  const userQuery = (context && context.query) || '';
+  const intent = (context && context.intent) || 'diagnosis';
+  const toolHint = (context && context.tool_hint) || '';
+  const prsContext = context && context.prs_snapshot
+    ? `Current PRS state for context: composite ${context.prs_snapshot.composite_score}/100 (${context.prs_snapshot.rag_status}).`
+    : '';
+
+  const userText = [
+    `Intent: ${intent}.`,
+    toolHint,
+    prsContext,
+    `User question: ${userQuery}`,
+  ].filter(Boolean).join('\n\n');
+
+  const tools = getToolDefinitions();
+  const messages = [{ role: 'user', content: userText }];
+  const reasoning_trace = [];
+  const raw_tool_calls = [];
+
+  let finalText = '';
+
+  for (let iter = 0; iter < TOOL_LOOP_MAX_ITERATIONS; iter += 1) {
+    const apiResponse = await callAnthropic(messages, tools);
+    const contentBlocks = Array.isArray(apiResponse.content) ? apiResponse.content : [];
+
+    // Collect any text the model produced this turn.
+    const textBlocks = contentBlocks.filter((b) => b.type === 'text');
+    if (textBlocks.length > 0) {
+      finalText = textBlocks.map((b) => b.text || '').join('\n').trim();
+    }
+
+    // Collect any tool_use blocks; if none, we're done.
+    const toolUseBlocks = contentBlocks.filter((b) => b.type === 'tool_use');
+    if (toolUseBlocks.length === 0 || apiResponse.stop_reason === 'end_turn') {
+      // Append assistant text turn for record (not needed by API anymore).
+      break;
+    }
+
+    // Append the assistant message with the tool_use blocks verbatim.
+    messages.push({ role: 'assistant', content: contentBlocks });
+
+    // Execute each tool_use sequentially and build matching tool_result blocks.
+    const toolResultBlocks = [];
+    for (const block of toolUseBlocks) {
+      const impl = getToolImplementation(block.name);
+      raw_tool_calls.push({ name: block.name, input: block.input || {} });
+
+      let toolOutput;
+      let toolErr = null;
+      if (!impl) {
+        toolErr = new Error(`unknown tool: ${block.name}`);
+      } else {
+        try {
+          // Tools take either no args or a single options object — pass input through.
+          toolOutput = await impl(block.input || {});
+        } catch (err) {
+          toolErr = err;
+        }
+      }
+
+      const summary = toolErr
+        ? `error: ${truncate(toolErr.message || toolErr)}`
+        : summariseToolOutput(toolOutput);
+
+      reasoning_trace.push({
+        tool_name: block.name,
+        tool_input: block.input || {},
+        tool_output_summary: summary,
+      });
+
+      toolResultBlocks.push({
+        type: 'tool_result',
+        tool_use_id: block.id,
+        is_error: !!toolErr,
+        content: toolErr
+          ? String(toolErr.message || toolErr).slice(0, 1000)
+          : JSON.stringify(toolOutput).slice(0, 4000),
+      });
+    }
+
+    messages.push({ role: 'user', content: toolResultBlocks });
+  }
+
+  const parsed = extractJSONFromText(finalText) || {};
+  const llm_response = {
+    summary_sentence: typeof parsed.summary_sentence === 'string'
+      ? parsed.summary_sentence
+      : (finalText || 'Claude returned no structured response.'),
+    score_breakdown: typeof parsed.score_breakdown === 'string' ? parsed.score_breakdown : '',
+    top_3_fixes: Array.isArray(parsed.top_3_fixes)
+      ? parsed.top_3_fixes.filter((s) => typeof s === 'string').slice(0, 3)
+      : [],
+    suggested_next_action: typeof parsed.suggested_next_action === 'string'
+      ? parsed.suggested_next_action
+      : '',
+  };
+
+  return { llm_response, reasoning_trace, raw_tool_calls };
+}
+
 /**
- * Public entry. Reads `context.prs_snapshot`, optionally calls the Loomi
- * Conversations Server for catalog questions, and returns the M3→M4 contract
- * shape. Never invokes the Anthropic SDK.
+ * Public entry. Switches on FEATURE_NATIVE_CLAUDE_TOOLS:
+ *   - true  → native Claude tool use via /anthropic-api proxy
+ *   - false → Loomi-only fallback (current default behaviour)
  */
 async function explainWithClaude(context) {
-  // Keep the function name for backwards-compat with query-handler.js;
-  // the implementation no longer talks to Claude.
+  if (isNativeClaudeEnabled()) {
+    return explainWithNativeClaude(context);
+  }
   return explainWithLoomi(context);
 }
 
@@ -306,8 +497,10 @@ async function explainWithLoomi(context) {
 }
 
 module.exports = {
-  explainWithClaude,   // legacy name kept for query-handler.js
+  explainWithClaude,   // public M3 entry — switches on FEATURE_NATIVE_CLAUDE_TOOLS
   explainWithLoomi,
+  explainWithNativeClaude,
+  isNativeClaudeEnabled,
   // Exported for unit testing only.
   _internal: {
     buildDiagnosisResponse,
@@ -316,5 +509,7 @@ module.exports = {
     buildArchetypeCompareResponse,
     isCatalogQuery,
     truncate,
+    extractJSONFromText,
+    summariseToolOutput,
   },
 };

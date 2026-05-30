@@ -110,10 +110,20 @@ describe('explainWithLoomi — Loomi-only path', () => {
     expect(result.reasoning_trace.some((s: any) => s.tool_name === 'askLoomiConversations')).toBe(true);
   });
 
-  test('explainWithClaude is an alias that no longer calls Anthropic', async () => {
+  test('explainWithClaude routes to Loomi when FEATURE_NATIVE_CLAUDE_TOOLS is off (default)', async () => {
+    delete process.env.FEATURE_NATIVE_CLAUDE_TOOLS;
     const r1 = await explainWithLoomi({ query: 'what to fix', intent: 'fix-request', prs_snapshot: SAMPLE_PRS });
     const r2 = await explainWithClaude({ query: 'what to fix', intent: 'fix-request', prs_snapshot: SAMPLE_PRS });
     expect(r1.llm_response.summary_sentence).toBe(r2.llm_response.summary_sentence);
+  });
+
+  test('extractJSONFromText pulls the JSON object out of mixed text', () => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { _internal } = require('../llm-explainer');
+    expect(_internal.extractJSONFromText('{"a":1}')).toEqual({ a: 1 });
+    expect(_internal.extractJSONFromText('preamble {"a":1, "b":"x"} trailing')).toEqual({ a: 1, b: 'x' });
+    expect(_internal.extractJSONFromText('no json here')).toBeNull();
+    expect(_internal.extractJSONFromText('')).toBeNull();
   });
 });
 

@@ -28,6 +28,8 @@ export interface FixResult {
   position?: number;
   dimension?: string;
   revenue_impact?: string;
+  /** Loomi AI: product names from Conversations API relevant to this fix. */
+  featured_products?: string[];
 }
 
 export interface ApprovalModalProps {

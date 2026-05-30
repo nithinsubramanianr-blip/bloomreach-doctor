@@ -2,10 +2,13 @@ import { render, screen } from '@testing-library/react';
 import ProductGrid from '../../src/m5-plp/components/ProductGrid';
 import type { DiscoveryProduct } from '../../src/m5-plp/lib/resultCache';
 
+// The new ProductCard reads `is_personalised` straight from the doc — the
+// live Discovery client sets it on the top 3 results in the AFTER state.
+// Tests mirror that contract on the top-3 fixtures only.
 const SAMPLE: DiscoveryProduct[] = [
-  { product_id: 'P001', name: 'A', price: 10, currency: 'GBP' },
-  { product_id: 'P002', name: 'B', price: 20, currency: 'GBP' },
-  { product_id: 'P003', name: 'C', price: 30, currency: 'GBP' },
+  { product_id: 'P001', name: 'A', price: 10, currency: 'GBP', is_personalised: true },
+  { product_id: 'P002', name: 'B', price: 20, currency: 'GBP', is_personalised: true },
+  { product_id: 'P003', name: 'C', price: 30, currency: 'GBP', is_personalised: true },
   { product_id: 'P004', name: 'D', price: 40, currency: 'GBP' },
   { product_id: 'P005', name: 'E', price: 50, currency: 'GBP' },
 ];

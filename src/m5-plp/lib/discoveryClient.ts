@@ -12,7 +12,7 @@
  * Spec: 006-react-plp / FR-006-23..25, design-spec lib/discoveryClient.ts
  */
 
-import type { DiscoveryProduct } from './resultCache';
+import type { DiscoveryProduct, DisplayState } from './resultCache';
 
 export interface DiscoverySearchResult {
   query: string;
@@ -20,7 +20,7 @@ export interface DiscoverySearchResult {
   products: DiscoveryProduct[];
 }
 
-const DEFAULT_TIMEOUT_MS = 2000;
+const DEFAULT_TIMEOUT_MS = 4000;
 
 type Persona = 'guest' | 'sarah' | 'alex';
 
@@ -34,62 +34,153 @@ function readEndpoint(): string | undefined {
   }
 }
 
-function readDiscoveryConfig(): { accountId?: string; domainKey?: string } {
+// ──────────────────────────────────────────────────────────────────────────
+// Pacific Apparel sample catalog — senior's feature/nextjs-app recipe.
+// account_id + domain_key are NOT secrets; they travel in the request URL.
+// Override via VITE_DISCOVERY_ACCOUNT_ID / VITE_DISCOVERY_DOMAIN_KEY if a
+// different catalog is wired in.
+// ──────────────────────────────────────────────────────────────────────────
+const PACIFIC_APPAREL_ACCOUNT_ID = '7529';
+const PACIFIC_APPAREL_DOMAIN_KEY = 'pacific_apparel';
+
+const CATALOG_SEARCH_PAGE = 'https://tools.bloomreach.com/discovery/catalogs/search';
+
+// Fields requested (`fl`) — must match senior's exactly so doc mapping works.
+const DISCOVERY_FL = [
+  'pid',
+  'title',
+  'brand',
+  'price',
+  'sale_price',
+  'thumb_image',
+  'url',
+  'price_range',
+  'description',
+].join(',');
+
+function readDiscoveryConfig(): { accountId: string; domainKey: string } {
   try {
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     const env = import.meta?.env ?? {};
+    const accountId = (env.VITE_DISCOVERY_ACCOUNT_ID as string | undefined)?.trim();
+    const domainKey = (env.VITE_DISCOVERY_DOMAIN_KEY as string | undefined)?.trim();
     return {
-      accountId: env.VITE_DISCOVERY_ACCOUNT_ID as string | undefined,
-      domainKey: env.VITE_DISCOVERY_DOMAIN_KEY as string | undefined,
+      accountId: accountId && accountId.length > 0 ? accountId : PACIFIC_APPAREL_ACCOUNT_ID,
+      domainKey: domainKey && domainKey.length > 0 ? domainKey : PACIFIC_APPAREL_DOMAIN_KEY,
     };
   } catch {
-    return {};
+    return {
+      accountId: PACIFIC_APPAREL_ACCOUNT_ID,
+      domainKey: PACIFIC_APPAREL_DOMAIN_KEY,
+    };
   }
 }
 
-// Normalises a raw Discovery search doc (uses BR standard field names pid/title)
-// to our internal DiscoveryProduct shape.
+interface DiscoveryDoc {
+  pid?: string;
+  title?: string;
+  brand?: string;
+  price?: number | string;
+  sale_price?: number | string;
+  thumb_image?: string;
+  url?: string;
+  price_range?: Array<number | string>;
+  description?: string;
+}
+
+function toNumber(value: number | string | undefined): number {
+  const n = typeof value === 'string' ? parseFloat(value) : value;
+  return typeof n === 'number' && Number.isFinite(n) ? n : 0;
+}
+
+/** Effective display price: sale_price when it is a real discount, else price. */
+function effectivePrice(doc: DiscoveryDoc): number {
+  const price = toNumber(doc.price);
+  const sale = toNumber(doc.sale_price);
+  return sale > 0 && sale < price ? sale : price || sale;
+}
+
+/**
+ * Maps a Discovery doc to our DiscoveryProduct shape. The senior's recipe:
+ * top-3 rows in the AFTER state are badged `is_personalised` so the
+ * "personalised" pill on the card lights up only for boosted items.
+ *
+ * Fields surfaced from the live doc: pid, title, brand, price, sale_price,
+ * thumb_image, url, description. Anything else stays undefined (the card
+ * skips fields gracefully). `category` deliberately remains undefined so the
+ * UI doesn't show the search term as a fake category badge.
+ */
 function mapDiscoveryDoc(
-  doc: Record<string, unknown>,
-  persona: Persona,
+  doc: DiscoveryDoc,
+  index: number,
+  _query: string,
+  state: DisplayState,
 ): DiscoveryProduct {
+  const listPrice = toNumber(doc.price);
+  const salePrice = toNumber(doc.sale_price);
+  const onSale = salePrice > 0 && salePrice < listPrice;
+
   return {
-    product_id: (doc.pid ?? doc.product_id ?? '') as string,
-    name: (doc.title ?? doc.name ?? '') as string,
-    description: doc.description as string | undefined,
-    price: Number(doc.price ?? 0),
+    product_id: doc.pid ?? `live-${index}`,
+    name: doc.title ?? '',
+    description: doc.description,
+    price: effectivePrice(doc),
+    list_price: listPrice > 0 ? listPrice : undefined,
+    sale_price: onSale ? salePrice : undefined,
     currency: 'USD',
-    category: doc.category as string | undefined,
-    price_band: doc.price_band as string | undefined,
-    gift_eligible: Boolean(doc.gift_eligible),
-    is_new_arrival: Boolean(doc.is_new_arrival),
-    is_bestseller: Boolean(doc.is_bestseller),
-    image_url: (doc.thumb_image ?? doc.image_url) as string | undefined,
-    is_personalised: persona !== 'guest',
+    brand: doc.brand,
+    image_url: doc.thumb_image,
+    product_url: doc.url,
+    rank_position: index + 1,
+    is_personalised: state === 'after' && index < 3,
   };
 }
 
 function bruidToPersona(bruid: string | null): Persona {
   if (!bruid) return 'guest';
-  if (bruid.includes('sarah')) return 'sarah';
-  if (bruid.includes('alex')) return 'alex';
+  // Senior's BRUIDs map to actual customers in the Pacific Apparel demo data.
+  if (bruid.includes('jakob') || bruid.includes('sarah')) return 'sarah';
+  if (bruid.includes('marvin') || bruid.includes('alex')) return 'alex';
   return 'guest';
 }
 
-// Maps persona → Discovery ref_url segment value.
-// Discovery boost rules are configured to fire when ref_url matches these strings:
-//   new_prospecting  → boost is_bestseller = true
-//   gifting_intent   → boost gift_eligible = true
-//   high_value_returning → boost is_new_arrival = true OR price_band = premium
-const PERSONA_SEGMENT_MAP: Record<Persona, string> = {
+// Maps persona → Discovery audience flag.
+// Discovery boost rules fire when `url` contains the flag query parameter:
+//   new_prospecting       → boost is_bestseller = true
+//   gifting_intent        → boost gift_eligible = true
+//   high_value_returning  → boost is_new_arrival = true OR price_band = premium
+const PERSONA_AUDIENCE_FLAG: Record<Persona, string> = {
   guest: 'new_prospecting',
   sarah: 'gifting_intent',
   alex: 'high_value_returning',
 };
 
-function personaToRefUrl(bruid: string | null): string {
-  return PERSONA_SEGMENT_MAP[bruidToPersona(bruid)];
+// Senior's pre-seeded BRUIDs (Pacific Apparel demo customers).
+// Used when no _br_uid_2 cookie is set on the calling page.
+const PERSONA_FALLBACK_BRUID: Record<Persona, string | null> = {
+  guest: null,
+  sarah: 'jakob-gifting-demo-001',
+  alex: 'marvin-highvalue-demo-002',
+};
+
+/** Builds the personalisation `url` param value (senior's recipe). */
+function buildContextUrl(persona: Persona, state: DisplayState, domainKey: string): string {
+  const base = `${CATALOG_SEARCH_PAGE}?catalog=${encodeURIComponent(domainKey)}&environment=production`;
+  if (state !== 'after') return base;
+  const flag = PERSONA_AUDIENCE_FLAG[persona];
+  return `${base}&${flag}=true`;
+}
+
+/** A request_id in Bloomreach's `br_<digits>` form. */
+function generateRequestId(): string {
+  const n = Math.floor(Math.random() * 1e10);
+  return `br_${n.toString().padStart(10, '0')}`;
+}
+
+/** Strips a leading `_br_uid_2=` if a raw cookie string is passed in. */
+function normaliseBruid(value: string): string {
+  return value.startsWith('_br_uid_2=') ? value.slice('_br_uid_2='.length) : value;
 }
 
 function boostScore(props: Record<string, unknown>, persona: Persona): number {
@@ -253,20 +344,29 @@ function parseMcpResponse(raw: string): any {
 // hit one network round-trip instead of two.
 const _inflight: Map<string, Promise<DiscoverySearchResult>> = new Map();
 
+// Endpoint used when no VITE_DISCOVERY_ENDPOINT is set. Public endpoint —
+// senior's feature/nextjs-app uses the same value.
+const DEFAULT_DISCOVERY_ENDPOINT = 'https://core.dxpapi.com/api/v1/core/';
+
 /**
  * Calls Discovery search. Throws (or aborts) on timeout / network error.
  * Callers are responsible for catching and falling back to resultCache.
+ *
+ * `state` drives the personalisation flag — 'after' appends the audience
+ * flag to the `url` param so Discovery boost rules fire. 'before' calls
+ * the same endpoint without the flag → generic ranking.
  */
 export async function search(
   query: string,
   bruid: string | null,
   signal?: AbortSignal,
   timeoutMs: number = DEFAULT_TIMEOUT_MS,
+  state: DisplayState = 'after',
 ): Promise<DiscoverySearchResult> {
-  const dedupKey = `${query}|${bruid ?? ''}`;
+  const dedupKey = `${query}|${bruid ?? ''}|${state}`;
   const existing = _inflight.get(dedupKey);
   if (existing) return existing;
-  const pending = _searchUncached(query, bruid, signal, timeoutMs)
+  const pending = _searchUncached(query, bruid, state, signal, timeoutMs)
     .finally(() => { _inflight.delete(dedupKey); });
   _inflight.set(dedupKey, pending);
   return pending;
@@ -275,14 +375,12 @@ export async function search(
 async function _searchUncached(
   query: string,
   bruid: string | null,
+  state: DisplayState,
   signal?: AbortSignal,
   timeoutMs: number = DEFAULT_TIMEOUT_MS,
 ): Promise<DiscoverySearchResult> {
-  const endpoint = readEndpoint();
-
-  if (!endpoint) {
-    return searchViaLoomiCatalog(query, bruid, signal);
-  }
+  // Endpoint defaults to dxpapi core when not overridden — senior's recipe.
+  const endpoint = (readEndpoint() || '').trim() || DEFAULT_DISCOVERY_ENDPOINT;
 
   // ── Bloomreach Discovery REST path ──────────────────────────────────────
   const controller = new AbortController();
@@ -295,67 +393,49 @@ async function _searchUncached(
 
   try {
     const persona = bruidToPersona(bruid);
-    const segment = personaToRefUrl(bruid); // e.g. "gifting_intent"
     const { accountId, domainKey } = readDiscoveryConfig();
 
     const reqUrl = new URL(endpoint);
-    reqUrl.searchParams.set('q', query);
-    reqUrl.searchParams.set('search_type', 'keyword');
+    reqUrl.searchParams.set('account_id', accountId);
+    reqUrl.searchParams.set('domain_key', domainKey);
     reqUrl.searchParams.set('request_type', 'search');
-    reqUrl.searchParams.set('start', '0');
+    reqUrl.searchParams.set('search_type', 'keyword');
     reqUrl.searchParams.set('rows', '50');
-    reqUrl.searchParams.set(
-      'fl',
-      'pid,title,description,price,category,price_band,gift_eligible,is_new_arrival,is_bestseller,thumb_image,image_url',
-    );
+    reqUrl.searchParams.set('start', '0');
+    reqUrl.searchParams.set('request_id', generateRequestId());
+    reqUrl.searchParams.set('user_id', persona);
+    reqUrl.searchParams.set('fl', DISCOVERY_FL);
+    reqUrl.searchParams.set('q', query);
 
-    if (accountId) reqUrl.searchParams.set('account_id', accountId);
-    if (domainKey) reqUrl.searchParams.set('domain_key', domainKey);
+    // Personalisation lives in the `url` param: BR catalog search URL plus
+    // the audience flag (`gifting_intent=true` etc.) only in AFTER state.
+    reqUrl.searchParams.set('url', buildContextUrl(persona, state, domainKey));
 
-    // BR audience segment signal: embed as query param inside the `url` value.
-    // Boost rules are configured to fire when `url` contains e.g. &gifting_intent=true.
-    // (Confirmed pattern from BR team — replaces the old ref_url approach.)
-    const basePageUrl =
-      typeof window !== 'undefined' ? `${window.location.origin}/` : endpoint;
-    const audienceUrl = `${basePageUrl}?${segment}=true`;
-    reqUrl.searchParams.set('url', audienceUrl);
-
-    if (bruid) {
-      const value = bruid.includes('=') ? bruid.split('=').slice(1).join('=') : bruid;
-      reqUrl.searchParams.set('_br_uid_2', value);
+    // _br_uid_2 — use the explicit cookie value if the caller provided one,
+    // otherwise fall back to the senior's pre-seeded BRUID for the persona.
+    const effectiveBruid = bruid
+      ? normaliseBruid(bruid)
+      : PERSONA_FALLBACK_BRUID[persona];
+    if (effectiveBruid) {
+      reqUrl.searchParams.set('_br_uid_2', effectiveBruid);
     }
 
     // eslint-disable-next-line no-console
-    console.group('[ppd:discovery] → REQUEST');
-    // eslint-disable-next-line no-console
-    console.log('URL:', reqUrl.toString());
-    // eslint-disable-next-line no-console
-    console.log('Params:', Object.fromEntries(reqUrl.searchParams));
-    // eslint-disable-next-line no-console
-    console.groupEnd();
+    console.log(
+      `[ppd:discovery] → q="${query}" persona="${persona}" state="${state}" bruid="${effectiveBruid ?? 'none'}"`,
+    );
 
     const resp = await fetch(reqUrl.toString(), {
       method: 'GET',
       headers: { Accept: 'application/json' },
       signal: controller.signal,
+      cache: 'no-store',
     });
 
     if (!resp.ok) throw new Error(`Discovery responded ${resp.status}`);
 
     const body = await resp.json();
-
-    // eslint-disable-next-line no-console
-    console.group('[ppd:discovery] ← RESPONSE');
-    // eslint-disable-next-line no-console
-    console.log('Status:', resp.status);
-    // eslint-disable-next-line no-console
-    console.log('numFound:', body?.response?.numFound ?? body?.total);
-    // eslint-disable-next-line no-console
-    console.log('Raw body:', body);
-    // eslint-disable-next-line no-console
-    console.groupEnd();
-
-    const rawDocs: Record<string, unknown>[] = Array.isArray(body?.response?.docs)
+    const rawDocs: DiscoveryDoc[] = Array.isArray(body?.response?.docs)
       ? body.response.docs
       : Array.isArray(body?.products)
         ? body.products
@@ -363,15 +443,16 @@ async function _searchUncached(
 
     if (rawDocs.length === 0) throw new Error('Discovery returned empty products');
 
-    const products = rawDocs.map((doc) => mapDiscoveryDoc(doc, persona));
+    const products = rawDocs.map((doc, idx) => mapDiscoveryDoc(doc, idx, query, state));
+
+    // eslint-disable-next-line no-console
+    console.log(`[ppd:discovery] ← ${products.length} products (state=${state})`);
 
     return {
       query,
       total: typeof body?.response?.numFound === 'number'
         ? body.response.numFound
-        : typeof body?.total === 'number'
-          ? body.total
-          : products.length,
+        : products.length,
       products,
     };
   } catch (_discoveryErr) {

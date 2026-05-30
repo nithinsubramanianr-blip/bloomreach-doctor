@@ -159,10 +159,12 @@ describe('C5 — fix catalogue', () => {
     expect(fixCatalogue.fixes).toHaveLength(6);
   });
 
-  test('rank 1 fix is linked to autosegment_coverage', () => {
-    const rank1 = fixCatalogue.fixes.find((f) => f.rank === 1);
-    expect(rank1).toBeDefined();
-    expect(rank1.dimension_linked).toBe('autosegment_coverage');
+  test('catalogue covers all 6 remediable dimensions', () => {
+    // The `rank` field is an authoring hint; the real top-3 is computed
+    // dynamically by fix-generator from the live PRS state. So we only
+    // assert that the full set of remediable dimensions is covered.
+    const dims = new Set(fixCatalogue.fixes.map((f) => f.dimension_linked));
+    expect(dims.size).toBe(6);
   });
 
   test('catalogue includes fixes for all three new Engagement MCP dimensions', () => {

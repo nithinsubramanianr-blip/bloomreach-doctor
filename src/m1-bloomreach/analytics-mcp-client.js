@@ -9,11 +9,15 @@
 
 'use strict';
 
-const { loadSyntheticDimension, isLiveMode } = require('./_synthetic-loader');
+const { loadSyntheticDimension, isLiveMode, selectedState } = require('./_synthetic-loader');
 const { normaliseDimension } = require('./normaliser');
 const { callMcpToolWithRetry } = require('./mcp-bridge');
 
 const CLIENT_NAME = 'analytics-mcp-client';
+
+// Demo narrative: activating boost rules also schedules 3 A/B tests (one per
+// rule) to measure the lift. Surfaced in the AFTER overlay.
+const ADDED_AB_TESTS_AFTER = 3;
 
 function logFallback(reason) {
   const suffix = reason ? ` (${reason})` : '';
@@ -43,8 +47,13 @@ async function callLiveABTestCoverage() {
   const payload = await callMcpToolWithRetry('list_experiments', { project_id: projectId });
 
   const all = (payload.data || []).filter((e) => !e.archived);
-  const running = all.filter((e) => e.status === 'running').length;
-  const total = all.length;
+  const liveRunning = all.filter((e) => e.status === 'running').length;
+  const liveTotal = all.length;
+
+  // AFTER overlay: assume 3 A/B tests were configured for the activated rules.
+  const state = selectedState();
+  const running = state === 'post_fix' ? liveRunning + ADDED_AB_TESTS_AFTER : liveRunning;
+  const total = state === 'post_fix' ? liveTotal + ADDED_AB_TESTS_AFTER : liveTotal;
 
   const raw_value = total > 0 ? running / total : 0;
   const normalised_score = Math.min(20, Math.round(raw_value * 20));
@@ -59,7 +68,7 @@ async function callLiveABTestCoverage() {
     timestamp: new Date().toISOString(),
   };
   // eslint-disable-next-line no-console
-  console.log(`[ppd:analytics-mcp] ← ab_test_coverage running=${running}/${total} raw=${raw_value.toFixed(2)} score=${normalised_score} status=${status}`);
+  console.log(`[ppd:analytics-mcp] ← ab_test_coverage state=${state} live=${liveRunning}/${liveTotal} effective=${running}/${total} raw=${raw_value.toFixed(2)} score=${normalised_score} status=${status}`);
   return result;
 }
 

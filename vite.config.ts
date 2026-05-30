@@ -36,6 +36,14 @@ export default defineConfig(({ mode }) => {
       // Keep a placeholder so TypeScript/code paths compile cleanly.
       // The actual auth header is added by the proxy below, not the browser.
       'process.env.BLOOMREACH_ENGAGEMENT_API_KEY': JSON.stringify('__proxy_injected__'),
+      // Feature flags — default to "false" if unset so demo behaviour is preserved.
+      'process.env.FEATURE_NATIVE_CLAUDE_TOOLS': JSON.stringify(env.FEATURE_NATIVE_CLAUDE_TOOLS || 'false'),
+      'process.env.FEATURE_PERSONA_PROVENANCE': JSON.stringify(env.FEATURE_PERSONA_PROVENANCE || 'false'),
+      'process.env.FEATURE_FOUNDATION_GAP': JSON.stringify(env.FEATURE_FOUNDATION_GAP || 'false'),
+      'process.env.FEATURE_SEGMENT_OPPORTUNITIES': JSON.stringify(env.FEATURE_SEGMENT_OPPORTUNITIES || 'false'),
+      'process.env.FEATURE_DOCTORS_REPORT': JSON.stringify(env.FEATURE_DOCTORS_REPORT || 'false'),
+      // Claude model id is needed in the browser when native tool use is enabled.
+      'process.env.CLAUDE_MODEL': JSON.stringify(env.CLAUDE_MODEL || 'claude-sonnet-4-20250514'),
     },
 
     server: {
@@ -67,6 +75,24 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
           secure: true,
           rewrite: (path: string) => path.replace(/^\/loomi-conversations/, ''),
+        },
+        // Anthropic Messages API — server-side proxy so ANTHROPIC_API_KEY never
+        // enters the browser bundle. Browser code POSTs to /anthropic-api/v1/messages;
+        // proxy forwards to api.anthropic.com with the x-api-key header injected here.
+        '/anthropic-api': {
+          target: 'https://api.anthropic.com',
+          changeOrigin: true,
+          secure: true,
+          rewrite: (path: string) => path.replace(/^\/anthropic-api/, ''),
+          configure: (proxyServer) => {
+            proxyServer.on('proxyReq', (proxyReq) => {
+              if (env.ANTHROPIC_API_KEY) {
+                proxyReq.setHeader('x-api-key', env.ANTHROPIC_API_KEY);
+                proxyReq.setHeader('anthropic-version', '2023-06-01');
+                proxyReq.setHeader('anthropic-dangerous-direct-browser-access', 'true');
+              }
+            });
+          },
         },
       },
     },

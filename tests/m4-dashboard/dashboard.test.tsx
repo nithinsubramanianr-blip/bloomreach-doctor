@@ -161,6 +161,11 @@ jest.mock('../../src/m3-nl/query-handler', () => ({
   handleQuery: (...args: unknown[]) => mockHandleQuery(...args),
 }));
 
+// Mock Loomi Conversations client — prevents real fetch calls during tests.
+jest.mock('../../src/m3-nl/loomi-conversations-client', () => ({
+  askLoomiConversations: jest.fn(() => Promise.resolve({ data: [] })),
+}));
+
 // --------------------------------------------------------------------------
 // Import components under test (after mocks are set up)
 // --------------------------------------------------------------------------
@@ -512,39 +517,55 @@ describe('Test 4 — NLChat: quick-action chip click calls handleQuery with exac
     });
   });
 
-  test('pre-loaded exchange is visible on initial render (no API call)', () => {
-    // handleQuery must NOT be called on mount.
+  test('no example exchange shown on initial render (no API call on mount)', () => {
+    // handleQuery must NOT be called on mount — no pre-loaded exchange.
     render(<NLChat prsState={null} />);
 
     expect(mockHandleQuery).not.toHaveBeenCalled();
-    // Pre-loaded query text visible — there will be multiple matches (exchange bubble + chip)
-    // so check at least one element contains it.
-    const matches = screen.getAllByText('Why is my personalisation not working?');
-    expect(matches.length).toBeGreaterThanOrEqual(1);
-    // Pre-loaded summary visible (only one instance).
-    expect(screen.getByText('Your personalisation is scoring 52/100.')).toBeInTheDocument();
-    // Exchange card present.
-    expect(screen.getByTestId('exchange-card')).toBeInTheDocument();
+    // No exchange card on initial render (pre-loaded exchange was removed).
+    expect(screen.queryByTestId('exchange-card')).not.toBeInTheDocument();
+    // The empty state prompt is visible instead.
+    expect(screen.getByText('Ask about your personalisation')).toBeInTheDocument();
   });
 
-  test('reasoning trace panel is present but collapsed by default', () => {
-    render(<NLChat prsState={null} />);
+  test('reasoning trace panel appears after a query is submitted', async () => {
+    // Mock query response with a reasoning trace step.
+    mockHandleQuery.mockResolvedValueOnce({
+      query: 'Why is BRUID low?',
+      intent: 'dimension-drill',
+      reasoning_trace: [
+        { tool_name: 'fetchBRUIDMatchRate', tool_input: {}, tool_output_summary: '22% match rate' },
+      ],
+      llm_response: {
+        summary_sentence: 'BRUID match rate is at 22%.',
+        score_breakdown: '',
+        top_3_fixes: [],
+        suggested_next_action: '',
+      },
+      timestamp: new Date().toISOString(),
+    });
 
-    const tracePanel = screen.getByTestId('reasoning-trace-panel');
-    expect(tracePanel).toBeInTheDocument();
+    await act(async () => {
+      render(<NLChat prsState={null} />);
+    });
 
-    // Collapsed — the tool name should not be visible yet (inside expanded area).
-    // The toggle button should show the closed indicator.
+    // Submit a query via the input.
+    const input = screen.getByTestId('chat-input');
+    const form = screen.getByTestId('nl-chat-form');
+    fireEvent.change(input, { target: { value: 'Why is BRUID low?' } });
+    await act(async () => {
+      fireEvent.submit(form);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('reasoning-trace-panel')).toBeInTheDocument();
+    });
+
+    // Collapsed by default.
     expect(screen.getByTestId('reasoning-trace-toggle')).toBeInTheDocument();
-  });
 
-  test('reasoning trace panel expands on toggle click', () => {
-    render(<NLChat prsState={null} />);
-
-    const toggle = screen.getByTestId('reasoning-trace-toggle');
-    fireEvent.click(toggle);
-
-    // After expand, tool name should be visible.
+    // Expand trace.
+    fireEvent.click(screen.getByTestId('reasoning-trace-toggle'));
     expect(screen.getByText('fetchBRUIDMatchRate')).toBeInTheDocument();
   });
 });
